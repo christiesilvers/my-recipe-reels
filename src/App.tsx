@@ -281,12 +281,22 @@ export default function App() {
   ).map(([handle, name]) => ({ handle, name }))
    .sort((a, b) => a.name.localeCompare(b.name))
 
-  const filtered = recipes.filter(r => {
-    if (activeCreator && r.handle !== activeCreator) return false
-    if (activeCuisine && r.cuisine !== activeCuisine) return false
-    if (search && !r.title.toLowerCase().includes(search.toLowerCase()) && !r.creator.toLowerCase().includes(search.toLowerCase())) return false
-    return true
-  })
+  function parseViews(v: string): number {
+    if (!v) return 0
+    const n = parseFloat(v)
+    if (v.endsWith('M')) return n * 1_000_000
+    if (v.endsWith('K')) return n * 1_000
+    return n || 0
+  }
+
+  const filtered = recipes
+    .filter(r => {
+      if (activeCreator && r.handle !== activeCreator) return false
+      if (activeCuisine && r.cuisine !== activeCuisine) return false
+      if (search && !r.title.toLowerCase().includes(search.toLowerCase()) && !r.creator.toLowerCase().includes(search.toLowerCase())) return false
+      return true
+    })
+    .sort((a, b) => activeCreator ? parseViews(b.views) - parseViews(a.views) : 0)
 
   return (
     <div className="text-white" style={{ background: '#0d0d0d' }}>
