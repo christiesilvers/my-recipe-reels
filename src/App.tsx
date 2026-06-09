@@ -149,19 +149,6 @@ function ReelModal({ reel, rating, userRating, onRate, onClose }: {
             </div>
           </div>
 
-          <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.05)' }}>
-            {count > 0 && (
-              <div className="flex items-center gap-2">
-                <Stars value={avg} />
-                <span className="text-xs font-semibold text-white">{avg.toFixed(1)}</span>
-                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>({count.toLocaleString()} {count === 1 ? 'rating' : 'ratings'})</span>
-              </div>
-            )}
-            <div className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              {userRating ? `You rated this ${userRating} star${userRating !== 1 ? 's' : ''}` : 'Rate this recipe:'}
-            </div>
-            <Stars value={userRating ?? 0} interactive onRate={onRate} />
-          </div>
 
           <div className="flex gap-2">
             <button
@@ -223,7 +210,7 @@ export default function App() {
   const [recipes, setRecipes] = useState<Reel[]>([])
   const [loading, setLoading] = useState(true)
   const [creatorPhotos, setCreatorPhotos] = useState<Map<string, CreatorInfo>>(new Map())
-  const [sortBy, setSortBy] = useState<'viewed' | 'rated' | 'newest'>('viewed')
+  const [sortBy, setSortBy] = useState<'viewed' | 'favorites' | 'newest'>('viewed')
   const [favCreators, setFavCreators] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('favCreators') || '[]')) } catch { return new Set() }
   })
@@ -299,14 +286,9 @@ export default function App() {
       if (search && !r.title.toLowerCase().includes(search.toLowerCase()) && !r.creator.toLowerCase().includes(search.toLowerCase())) return false
       return true
     })
+    .filter(r => sortBy === 'favorites' ? saved.has(r.id) : true)
     .sort((a, b) => {
       if (sortBy === 'viewed') return parseViews(b.views) - parseViews(a.views)
-      if (sortBy === 'rated') {
-        const ra = ratings[a.videoId], rb = ratings[b.videoId]
-        const avgA = ra && ra.count > 0 ? ra.total / ra.count : 0
-        const avgB = rb && rb.count > 0 ? rb.total / rb.count : 0
-        return avgB - avgA
-      }
       if (sortBy === 'newest') return parseInt(b.id.replace('recipe-', '')) - parseInt(a.id.replace('recipe-', ''))
       return 0
     })
@@ -479,9 +461,9 @@ export default function App() {
           <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
             <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'rgba(255,255,255,0.06)' }}>
               {([
-                { key: 'viewed', label: 'Most Views' },
-                { key: 'rated',  label: 'Top Rated' },
-                { key: 'newest', label: 'Date Posted' },
+                { key: 'viewed',    label: 'Most Views' },
+                { key: 'favorites', label: 'My Favorites' },
+                { key: 'newest',    label: 'Date Posted' },
               ] as const).map(opt => (
                 <button
                   key={opt.key}
@@ -545,12 +527,6 @@ export default function App() {
                     <span className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>{reel.handle} · {reel.views} views</span>
                   </div>
 
-                  {ratings[reel.videoId] && ratings[reel.videoId].count > 0 && (
-                    <div className="flex items-center gap-1 mb-2">
-                      <Stars value={ratings[reel.videoId].total / ratings[reel.videoId].count} />
-                      <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>({ratings[reel.videoId].count})</span>
-                    </div>
-                  )}
                   <div className="flex gap-1 flex-wrap">
                     {reel.hasAiRecipe && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: GREEN_LIGHT, color: GREEN_DARK }}>Print recipe</span>
