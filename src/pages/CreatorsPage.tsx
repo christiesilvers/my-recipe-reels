@@ -274,7 +274,7 @@ export default function CreatorsPage() {
           🎬 My<span style={{ color: GREEN }}>Recipe</span>Reels
         </Link>
         <div className="flex items-center gap-4 text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
-          <Link to="/" className="hover:text-white transition" style={{ color: 'inherit', textDecoration: 'none' }}>Browse</Link>
+          <Link to="/" className="hover:text-white transition" style={{ color: 'inherit', textDecoration: 'none' }}>Home</Link>
           <Link to="/creators" className="font-semibold" style={{ color: GREEN, textDecoration: 'none' }}>Creators</Link>
           <button
             onClick={() => setShowAuth(true)}
