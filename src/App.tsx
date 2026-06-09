@@ -143,13 +143,15 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
         </div>
         {/* Video */}
         <div className="w-full relative flex-1 min-h-0" style={{ background: reel.bg }}>
-          <div className="absolute top-1 right-1 z-10 flex flex-col gap-2">
-            <button
-              onClick={togglePlay}
-              className="grid h-9 w-9 place-items-center text-xl"
-              style={{ color: 'rgba(255,255,255,0.9)', background: 'transparent', border: 'none' }}
-            >{playing ? '⏸' : '▶'}</button>
-          </div>
+          {!isMobile && (
+            <div className="absolute top-1 right-1 z-10 flex flex-col gap-2">
+              <button
+                onClick={togglePlay}
+                className="grid h-9 w-9 place-items-center text-xl"
+                style={{ color: 'rgba(255,255,255,0.9)', background: 'transparent', border: 'none' }}
+              >{playing ? '⏸' : '▶'}</button>
+            </div>
+          )}
           {embedUrl ? (
             <iframe
               ref={iframeRef}
