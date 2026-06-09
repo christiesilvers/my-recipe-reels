@@ -50,14 +50,80 @@ function toReel(r: Recipe): Reel {
 }
 
 
-function ReelModal({ reel, onClose }: {
+function printRecipe(reel: Reel) {
+  let parsed: { ingredients?: string[]; steps?: string[]; servings?: string; time?: string } | null = null
+  try { parsed = reel.recipe ? JSON.parse(reel.recipe) : null } catch { parsed = null }
+  if (!parsed) return
+
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.write(`<!DOCTYPE html><html><head><title>${reel.title} — Recipe</title><style>
+    body { font-family: Georgia, serif; max-width: 600px; margin: 40px auto; padding: 0 20px; color: #111; }
+    h1 { font-size: 1.6rem; margin-bottom: 4px; }
+    .meta { color: #666; font-size: 0.9rem; margin-bottom: 24px; }
+    h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-top: 24px; }
+    ul, ol { padding-left: 1.4em; line-height: 1.9; }
+    .footer { margin-top: 40px; font-size: 0.75rem; color: #aaa; }
+    @media print { body { margin: 20px; } }
+  </style></head><body>
+    <h1>${reel.title}</h1>
+    <div class="meta">${reel.creator}${parsed.time ? ' · ' + parsed.time : ''}${parsed.servings ? ' · Serves ' + parsed.servings : ''}</div>
+    ${parsed.ingredients?.length ? `<h2>Ingredients</h2><ul style="columns:2;gap:2em;list-style:none;padding-left:0;">${parsed.ingredients.map(i => `<li style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;"><input type="checkbox" style="margin-top:2px;flex-shrink:0;"> ${i}</li>`).join('')}</ul>` : ''}
+    ${parsed.steps?.length ? `<h2>Steps</h2><ol>${parsed.steps.map(s => `<li>${s}</li>`).join('')}</ol>` : ''}
+    <div class="footer" style="position:fixed;bottom:20px;right:20px;">Printed from MyRecipeReels.com · Reel Inspiration · For the Love of ReelFood</div>
+  </body></html>`)
+  win.document.close()
+  win.focus()
+  win.onafterprint = () => win.close()
+  win.print()
+}
+
+function useRatings() {
+  const [ratings, setRatings] = useState<Record<string, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('reelRatings') || '{}') } catch { return {} }
+  })
+  function rate(id: string, stars: number) {
+    setRatings(prev => {
+      const next = { ...prev, [id]: prev[id] === stars ? 0 : stars }
+      if (next[id] === 0) delete next[id]
+      localStorage.setItem('reelRatings', JSON.stringify(next))
+      return next
+    })
+  }
+  return { ratings, rate }
+}
+
+function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave }: {
   reel: Reel
   onClose: () => void
+  onHide: () => void
+  onPrev: (() => void) | null
+  onNext: (() => void) | null
+  saved: boolean
+  onToggleSave: () => void
 }) {
   const [showRecipe, setShowRecipe] = useState(false)
-  const [playing, setPlaying] = useState(false)
-  const embedUrl = reel.videoId ? `https://www.youtube.com/embed/${reel.videoId}` : null
-  const thumbUrl = reel.videoId ? `https://img.youtube.com/vi/${reel.videoId}/hqdefault.jpg` : null
+  const [playing, setPlaying] = useState(true)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const embedUrl = reel.videoId ? `https://www.youtube-nocookie.com/embed/${reel.videoId}?autoplay=1&rel=0&enablejsapi=1` : null
+
+
+  function togglePlay() {
+    const cmd = playing ? 'pauseVideo' : 'playVideo'
+    iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: cmd, args: [] }), '*')
+    setPlaying(p => !p)
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.code === 'Space' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault()
+        togglePlay()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [playing])
 
   return (
     <div
@@ -65,103 +131,147 @@ function ReelModal({ reel, onClose }: {
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
-        style={{ background: '#1a1a1a' }}
+        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+        style={{ background: '#1a1a1a', maxHeight: '90vh' }}
         onClick={e => e.stopPropagation()}
       >
+        {/* Header */}
+        <div className="px-4 py-2 text-sm font-bold flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
+          <span>My<span style={{ color: GREEN }}>Recipe</span>Reels <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400, fontSize: '0.75rem' }}>· Reel Inspiration</span></span>
+          <button onClick={onClose} className="text-lg leading-none" style={{ color: 'rgba(255,255,255,0.5)' }}>✕</button>
+        </div>
         {/* Video */}
         <div className="aspect-[9/16] w-full relative" style={{ background: reel.bg }}>
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 z-10 grid h-8 w-8 place-items-center rounded-full text-white"
-            style={{ background: 'rgba(0,0,0,0.6)' }}
-          >✕</button>
-          {playing && embedUrl ? (
+          <div className="absolute top-1 right-1 z-10 flex flex-col gap-2">
+            <button
+              onClick={togglePlay}
+              className="grid h-9 w-9 place-items-center text-xl"
+              style={{ color: 'rgba(255,255,255,0.9)' }}
+            >{playing ? '⏸' : '▶'}</button>
+          </div>
+          {embedUrl ? (
             <iframe
-              src={embedUrl + '?autoplay=1&rel=0'}
+              ref={iframeRef}
+              src={embedUrl}
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
           ) : (
-            <div className="w-full h-full relative">
-              {thumbUrl ? (
-                <img src={thumbUrl} alt={reel.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-8xl">{reel.emoji}</div>
-              )}
-              <div
-                className="absolute inset-0 flex items-center justify-center cursor-pointer"
-                onClick={() => setPlaying(true)}
-              >
-                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }}>
-                  <span className="text-white text-2xl ml-1">▶</span>
-                </div>
-              </div>
-            </div>
+            <div className="w-full h-full flex items-center justify-center text-8xl">{reel.emoji}</div>
           )}
         </div>
 
-        <div className="p-4 space-y-3">
+        <div className="p-4 space-y-2 overflow-y-auto flex-1">
           <div>
             <div className="font-bold text-white text-lg">{reel.title}</div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{reel.creator} · {reel.cuisine} · {reel.views} views</span>
-              {reel.videoId && (
-                <a
-                  href={`https://www.youtube.com/watch?v=${reel.videoId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-medium"
-                  style={{ color: GREEN }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  Watch on YouTube ↗
-                </a>
-              )}
-            </div>
-          </div>
-
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowRecipe(!showRecipe)}
-              className="flex-1 rounded-full py-2 text-xs font-bold transition"
-              style={reel.hasAiRecipe
-                ? { background: GREEN_LIGHT, color: GREEN_DARK }
-                : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
-            >
-              {reel.hasAiRecipe ? '🖨️ Print recipe' : 'Recipe coming soon'}
-            </button>
-            <button
-              className="flex-1 rounded-full py-2 text-xs font-bold text-white transition"
-              style={{ background: '#F97316' }}
-            >
-              🛒 Order ingredients
-            </button>
-          </div>
-
-          {showRecipe && reel.hasAiRecipe && (
-            <div className="rounded-xl p-3 text-sm space-y-2" style={{ background: 'rgba(255,255,255,0.05)' }}>
-              <div className="font-bold text-white">Full Recipe</div>
-              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Based on the video — ingredient amounts may vary.</p>
-              <div className="text-xs space-y-1">
-                <div className="font-semibold" style={{ color: 'rgba(255,255,255,0.7)' }}>Ingredients:</div>
-                <ul className="list-disc list-inside space-y-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  <li>400g pasta</li><li>4 tbsp butter</li><li>4 cloves garlic, minced</li>
-                  <li>½ cup parmesan, grated</li><li>Fresh basil, salt & pepper</li>
-                </ul>
-                <div className="font-semibold pt-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Steps:</div>
-                <ol className="list-decimal list-inside space-y-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  <li>Cook pasta until al dente, reserve ½ cup pasta water</li>
-                  <li>Brown butter in pan over medium heat until nutty</li>
-                  <li>Add garlic, cook 1 minute</li>
-                  <li>Toss pasta in butter with a splash of pasta water</li>
-                  <li>Remove from heat, stir in parmesan, top with basil</li>
-                </ol>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{reel.creator} · {reel.views} views</span>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={() => onPrev && onPrev()}
+                  disabled={!onPrev}
+                  className="w-7 h-7 rounded-full text-base font-bold transition grid place-items-center"
+                  style={{ background: onPrev ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)', color: onPrev ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)' }}
+                >←</button>
+                <button
+                  onClick={() => onNext && onNext()}
+                  disabled={!onNext}
+                  className="w-7 h-7 rounded-full text-base font-bold transition grid place-items-center"
+                  style={{ background: onNext ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)', color: onNext ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)' }}
+                >→</button>
               </div>
             </div>
-          )}
+          </div>
+
+          <div className="flex gap-2 items-stretch">
+            {/* Left: Hide + Heart + Print + View Recipe */}
+            <div className="flex gap-1 items-stretch">
+              <button
+                onClick={onHide}
+                className="rounded-2xl px-2 font-semibold text-xs leading-tight flex flex-col items-center justify-center"
+                style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.06)' }}
+              >
+                <div>Hide</div>
+                <div>Reel</div>
+              </button>
+              {reel.hasAiRecipe && (
+                <>
+                  <button
+                    onClick={() => printRecipe(reel)}
+                    className="rounded-2xl px-3 text-3xl font-bold transition"
+                    style={{ background: GREEN_LIGHT, color: GREEN_DARK }}
+                    title="Print recipe"
+                  >🖨️</button>
+                  <button
+                    onClick={() => setShowRecipe(!showRecipe)}
+                    className="rounded-2xl px-2 font-bold transition leading-tight flex flex-col items-center justify-center"
+                    style={{ background: GREEN_LIGHT, color: GREEN_DARK }}
+                  >
+                    <div className="text-[10px]">{showRecipe ? 'Hide' : 'View'}</div>
+                    <div className="text-[10px]">Recipe</div>
+                  </button>
+                </>
+              )}
+              {!reel.hasAiRecipe && (
+                <button
+                  className="rounded-2xl px-2 text-[10px] font-bold"
+                  style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
+                  disabled
+                >Coming soon</button>
+              )}
+            </div>
+            {/* Center: Instacart */}
+            <button
+              className="flex-1 rounded-2xl font-bold text-white transition flex flex-col items-center justify-center py-1"
+              style={{ background: '#43B02A' }}
+            >
+              <span className="text-lg leading-none">🛒</span>
+              <span className="text-[11px] mt-0.5 whitespace-nowrap">Order On Instacart</span>
+            </button>
+            {/* Right: Heart */}
+            <button
+              onClick={onToggleSave}
+              className="rounded-2xl px-3 text-3xl leading-none transition-transform hover:scale-110"
+              style={{ color: saved ? '#ef4444' : 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.06)' }}
+            >{saved ? '♥' : '♡'}</button>
+          </div>
+
+          {showRecipe && reel.hasAiRecipe && (() => {
+            let parsed: { ingredients?: string[]; steps?: string[]; servings?: string; time?: string } | null = null
+            try { parsed = reel.recipe ? JSON.parse(reel.recipe) : null } catch { parsed = null }
+            if (!parsed) return null
+            return (
+              <div className="rounded-xl p-3 text-sm space-y-2" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-white">Full Recipe</div>
+                  {(parsed.time || parsed.servings) && (
+                    <div className="text-[11px] flex gap-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      {parsed.time && <span>{parsed.time}</span>}
+                      {parsed.servings && <span>· {parsed.servings}</span>}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Based on the video — ingredient amounts may vary.</p>
+                {parsed.ingredients && parsed.ingredients.length > 0 && (
+                  <div className="text-xs space-y-1">
+                    <div className="font-semibold" style={{ color: 'rgba(255,255,255,0.7)' }}>Ingredients:</div>
+                    <ul className="list-disc list-inside space-y-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      {parsed.ingredients.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {parsed.steps && parsed.steps.length > 0 && (
+                  <div className="text-xs space-y-1">
+                    <div className="font-semibold pt-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Steps:</div>
+                    <ol className="list-decimal list-inside space-y-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      {parsed.steps.map((step, i) => <li key={i}>{step}</li>)}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>
@@ -169,6 +279,7 @@ function ReelModal({ reel, onClose }: {
 }
 
 export default function App() {
+  const { ratings, rate } = useRatings()
   const [search, setSearch] = useState('')
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -180,10 +291,30 @@ export default function App() {
   const [activeReel, setActiveReel] = useState<Reel | null>(null)
   const [activeCreator, setActiveCreator] = useState<string | null>(null)
   const [saved, setSaved] = useState<Set<string>>(new Set())
+  const [hiddenReels, setHiddenReels] = useState<{id: string; title: string; creator: string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem('hiddenReels') || '[]') } catch { return [] }
+  })
+  const hiddenIds = new Set(hiddenReels.map(r => r.id))
+
+  function hideReel(reel: Reel) {
+    setHiddenReels(prev => {
+      const next = [...prev, { id: reel.id, title: reel.title, creator: reel.creator }]
+      localStorage.setItem('hiddenReels', JSON.stringify(next))
+      return next
+    })
+    setActiveReel(null)
+  }
+  function unhideReel(id: string) {
+    setHiddenReels(prev => {
+      const next = prev.filter(r => r.id !== id)
+      localStorage.setItem('hiddenReels', JSON.stringify(next))
+      return next
+    })
+  }
   const [recipes, setRecipes] = useState<Reel[]>([])
   const [loading, setLoading] = useState(true)
   const [creatorPhotos, setCreatorPhotos] = useState<Map<string, CreatorInfo>>(new Map())
-  const [sortBy, setSortBy] = useState<'viewed' | 'favorites' | 'newest'>('viewed')
+  const [sortBy, setSortBy] = useState<'viewed' | 'favorites' | 'newest' | 'recipe' | 'hidden'>('recipe')
   const [favCreators, setFavCreators] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('favCreators') || '[]')) } catch { return new Set() }
   })
@@ -226,13 +357,15 @@ export default function App() {
   }
 
   const filtered = recipes
+    .filter(r => sortBy === 'hidden' ? hiddenIds.has(r.id) : !hiddenIds.has(r.id))
     .filter(r => {
+      if (sortBy === 'hidden') return true
       if (activeCreator && r.handle !== activeCreator) return false
       if (activeCuisine && r.cuisine !== activeCuisine) return false
       if (search && !r.title.toLowerCase().includes(search.toLowerCase()) && !r.creator.toLowerCase().includes(search.toLowerCase())) return false
       return true
     })
-    .filter(r => sortBy === 'favorites' ? saved.has(r.id) : true)
+    .filter(r => sortBy === 'favorites' ? saved.has(r.id) : sortBy === 'recipe' ? r.hasAiRecipe : true)
     .sort((a, b) => {
       if (sortBy === 'viewed') return parseViews(b.views) - parseViews(a.views)
       if (sortBy === 'newest') return parseInt(b.id.replace('recipe-', '')) - parseInt(a.id.replace('recipe-', ''))
@@ -240,7 +373,7 @@ export default function App() {
     })
 
   return (
-    <div className="text-white" style={{ background: '#0d0d0d' }}>
+    <div className="text-white" style={{ background: '#110f0a' }}>
 
       {/* ── Hero ── */}
       <div className="relative overflow-hidden" style={{ minHeight: 'clamp(380px, 55vh, 650px)' }}>
@@ -253,7 +386,7 @@ export default function App() {
         {/* Nav */}
         <nav className="relative z-10 flex items-center justify-between px-5 md:px-12 py-3" style={{ background: 'rgba(0,0,0,0.45)' }}>
           <span className="text-2xl font-bold text-white">
-            🎬 My<span style={{ color: GREEN }}>Recipe</span>Reels <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>· Reel Inspiration</span>
+            My<span style={{ color: GREEN }}>Recipe</span>Reels <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 400 }}>· Reel Inspiration</span>
           </span>
           <div className="hidden md:flex gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
             <span className="cursor-pointer hover:text-white transition">Home</span>
@@ -268,19 +401,11 @@ export default function App() {
 
         {/* Hero content */}
         <div className="relative z-10 px-5 pb-8 pt-6 md:px-12">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 leading-tight" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.9)' }}>
-            Search it. Save it. Shop it. Serve it.
+          <div style={{ width: 'fit-content', maxWidth: '100%' }}>
+          <h1 className="text-xl sm:text-3xl md:text-5xl font-bold text-white mb-4 leading-tight whitespace-nowrap" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.9)' }}>
+            Search · Save · Shop · Serve
           </h1>
-          <p className="text-sm md:text-base mb-4" style={{ color: 'rgba(255,255,255,0.95)', textShadow: '0 1px 6px rgba(0,0,0,0.9)' }}>
-            Find any recipe reel. Print the recipe. Order ingredients instantly.<br /><strong>Your recipe reels, your way.</strong>
-          </p>
-          <button
-            className="mb-5 rounded-full px-6 py-2.5 text-sm font-semibold text-white"
-            style={{ background: GREEN }}
-          >
-            Start your reel cookbook
-          </button>
-          <div className="flex gap-2 w-full max-w-xl rounded-2xl p-2" style={{ background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.35)' }}>
+          <div className="flex gap-2 w-full rounded-2xl p-2" style={{ background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.35)' }}>
             <input
               type="text"
               placeholder="Search pasta, Gordon Ramsay, 30 min meals..."
@@ -295,8 +420,9 @@ export default function App() {
               className="rounded-xl px-5 py-2 text-sm font-medium text-white whitespace-nowrap"
               style={{ background: GREEN }}
             >
-              🔍 Search
+              Search
             </button>
+          </div>
           </div>
         </div>
       </div>
@@ -308,7 +434,9 @@ export default function App() {
         {favCreators.size > 0 && (
           <section>
             <div className="flex items-center justify-between mb-3">
-              <div className="text-xs font-medium uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>My Faves</div>
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <span style={{ color: '#ef4444' }}>♥</span> My Favorite Creators
+              </div>
               {activeCreator && (
                 <button className="text-xs" style={{ color: GREEN }} onClick={() => setActiveCreator(null)}>
                   Clear filter
@@ -406,58 +534,58 @@ export default function App() {
           <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
             <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'rgba(255,255,255,0.06)' }}>
               {([
-                { key: 'viewed',    label: 'Most Views' },
+                { key: 'recipe',    label: 'Recipe Included' },
                 { key: 'favorites', label: 'My Favorites' },
                 { key: 'newest',    label: 'Date Posted' },
+                { key: 'viewed',    label: 'Most Views' },
+                { key: 'hidden',    label: 'Hidden' },
               ] as const).map(opt => (
                 <button
                   key={opt.key}
                   onClick={() => setSortBy(opt.key)}
                   className="px-3 py-1 rounded-lg text-xs font-semibold transition"
                   style={sortBy === opt.key
-                    ? { background: GREEN, color: '#fff' }
-                    : { color: 'rgba(255,255,255,0.4)' }}
+                    ? { background: opt.key === 'hidden' ? '#ef4444' : GREEN, color: '#fff' }
+                    : { color: opt.key === 'hidden' ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.4)' }}
                 >
                   {opt.label}
                 </button>
               ))}
             </div>
-            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{filtered.length} reels</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{filtered.length} reels</span>
+            </div>
           </div>
 
           {loading && (
             <div className="text-center py-12 text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading reels...</div>
           )}
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {filtered.map(reel => (
               <div
                 key={reel.id}
                 className="rounded-2xl cursor-pointer transition hover:scale-[1.02] flex flex-col justify-between"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', minHeight: 130 }}
+                style={{ background: 'rgba(255,248,235,0.06)', border: '0.5px solid rgba(255,248,235,0.12)' }}
                 onClick={() => setActiveReel(reel)}
               >
-                <div className="p-3 flex-1 flex flex-col">
-                  {/* Top row: cuisine text + save */}
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>{reel.cuisine}</span>
-                    <button
-                      onClick={e => {
-                        e.stopPropagation()
-                        setSaved(prev => { const n = new Set(prev); n.has(reel.id) ? n.delete(reel.id) : n.add(reel.id); return n })
-                      }}
-                      className="text-base leading-none flex-shrink-0"
-                      style={{ color: saved.has(reel.id) ? '#ef4444' : 'rgba(255,255,255,0.25)' }}
-                    >
-                      {saved.has(reel.id) ? '♥' : '♡'}
-                    </button>
-                  </div>
+                <div className="p-2 flex-1 flex flex-col">
+                  {/* Top row: unhide button (hidden view only) */}
+                  {sortBy === 'hidden' && (
+                    <div className="flex mb-1">
+                      <button
+                        onClick={e => { e.stopPropagation(); unhideReel(reel.id) }}
+                        className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                        style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}
+                      >Unhide</button>
+                    </div>
+                  )}
 
                   {/* Title */}
-                  <div className="text-sm font-semibold text-white leading-snug mb-2 flex-1">{reel.title}</div>
+                  <div className="text-sm font-semibold leading-snug mb-1 flex-1 line-clamp-2" style={{ color: '#f0ebe0' }}>{reel.title.replace(/#\S+/g, '').replace(/\s+/g, ' ').trim()}</div>
 
                   {/* Creator row */}
-                  <div className="flex items-center gap-1.5 mb-2">
+                  <div className="flex items-center gap-1.5">
                     {(() => {
                       const style = creatorStyle(reel.handle)
                       const photo = style.photo || creatorPhotos.get(reel.handle.toLowerCase())?.thumbnailUrl
@@ -469,15 +597,19 @@ export default function App() {
                         </div>
                       )
                     })()}
-                    <span className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>{reel.handle} · {reel.views} views</span>
+                    <span className="text-[11px] truncate flex-1" style={{ color: 'rgba(255,255,255,0.5)' }}>{reel.handle} · {reel.views} views</span>
+                    <div className="flex items-center gap-0.5 flex-shrink-0 ml-auto" onClick={e => e.stopPropagation()}>
+                      {[1,2,3,4,5].map(star => (
+                        <button
+                          key={star}
+                          onClick={() => rate(reel.id, star)}
+                          className="text-xs leading-none"
+                          style={{ color: star <= (ratings[reel.id] || 0) ? '#FBBF24' : 'rgba(255,255,255,0.2)' }}
+                        >★</button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="flex gap-1 flex-wrap">
-                    {reel.hasAiRecipe && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: GREEN_LIGHT, color: GREEN_DARK }}>Print recipe</span>
-                    )}
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#FAEEDA', color: '#854F0B' }}>Order ingredients</span>
-                  </div>
                 </div>
               </div>
             ))}
@@ -486,12 +618,21 @@ export default function App() {
 
       </div>
 
-      {activeReel && (
-        <ReelModal
-          reel={activeReel}
-          onClose={() => setActiveReel(null)}
-        />
-      )}
+      {activeReel && (() => {
+        const idx = filtered.findIndex(r => r.id === activeReel.id)
+        return (
+          <ReelModal
+            reel={activeReel}
+            onClose={() => setActiveReel(null)}
+            onHide={() => hideReel(activeReel)}
+            onPrev={idx > 0 ? () => setActiveReel(filtered[idx - 1]) : null}
+            onNext={idx < filtered.length - 1 ? () => setActiveReel(filtered[idx + 1]) : null}
+            saved={saved.has(activeReel.id)}
+            onToggleSave={() => setSaved(prev => { const n = new Set(prev); n.has(activeReel.id) ? n.delete(activeReel.id) : n.add(activeReel.id); return n })}
+          />
+        )
+      })()}
+
     </div>
   )
 }
