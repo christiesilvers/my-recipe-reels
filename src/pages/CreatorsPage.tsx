@@ -271,7 +271,7 @@ export default function CreatorsPage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-5 md:px-12 py-4" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
         <Link to="/" className="text-2xl font-bold text-white no-underline">
-          🎬 My<span style={{ color: GREEN }}>Recipe</span>Reels
+          🎬 My<span style={{ color: GREEN }}>Recipe</span>Reels <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>· Reel Inspiration</span>
         </Link>
         <div className="flex items-center gap-4 text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
           <Link to="/" className="hover:text-white transition" style={{ color: 'inherit', textDecoration: 'none' }}>Home</Link>

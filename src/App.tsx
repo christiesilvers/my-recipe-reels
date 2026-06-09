@@ -253,7 +253,7 @@ export default function App() {
         {/* Nav */}
         <nav className="relative z-10 flex items-center justify-between px-5 md:px-12 py-3" style={{ background: 'rgba(0,0,0,0.45)' }}>
           <span className="text-2xl font-bold text-white">
-            🎬 My<span style={{ color: GREEN }}>Recipe</span>Reels
+            🎬 My<span style={{ color: GREEN }}>Recipe</span>Reels <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>· Reel Inspiration</span>
           </span>
           <div className="hidden md:flex gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
             <span className="cursor-pointer hover:text-white transition">Home</span>
