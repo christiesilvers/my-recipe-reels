@@ -169,7 +169,7 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
           )}
         </div>
 
-        <div className="p-4 space-y-2 flex-shrink-0">
+        <div className="px-4 pt-2 pb-2 space-y-1.5 flex-shrink-0">
           <div>
             <div className="font-bold text-white text-lg">{reel.title.replace(/#\S+/g, '').replace(/\s+/g, ' ').trim()}</div>
             <div className="flex items-center justify-between gap-2">
