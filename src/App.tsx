@@ -105,7 +105,7 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
   const [showRecipe, setShowRecipe] = useState(false)
   const [playing, setPlaying] = useState(true)
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const embedUrl = reel.videoId ? `https://www.youtube-nocookie.com/embed/${reel.videoId}?autoplay=1&mute=1&rel=0&enablejsapi=1` : null
+  const embedUrl = reel.videoId ? `https://www.youtube-nocookie.com/embed/${reel.videoId}?autoplay=1&mute=1&rel=0&enablejsapi=1&playsinline=1` : null
 
 
   function togglePlay() {
