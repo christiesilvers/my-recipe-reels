@@ -17,7 +17,6 @@ const CUISINES = [
   { name: 'Breakfast',     emoji: '🥞', bg: '#fffff0' },
 ]
 
-const FILTERS = ['All', 'Under 30 min', 'Vegan', '5 ingredients', 'Meal prep', 'Date night', 'Cocktails']
 
 const CREATOR_STYLE: Record<string, { emoji: string; bg: string; photo?: string }> = {
   '@justineskitchen': { emoji: '👩‍🍳', bg: '#1a120a', photo: 'https://yt3.googleusercontent.com/ZdF6Eb_669kPPK96Adf4RT8JWAI1XU55RXNJ91lcGX3Ctb0GiRwHGzbjFCYFcgC4rGqX7lKCqw=s200-c-k-c0x00ffffff-no-rj' },
@@ -105,7 +104,7 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
   const [showRecipe, setShowRecipe] = useState(false)
   const [playing, setPlaying] = useState(true)
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const embedUrl = reel.videoId ? `https://www.youtube-nocookie.com/embed/${reel.videoId}?autoplay=1&rel=0&enablejsapi=1` : null
+  const embedUrl = reel.videoId ? `https://www.youtube-nocookie.com/embed/${reel.videoId}?autoplay=1&mute=1&rel=0&enablejsapi=1` : null
 
 
   function togglePlay() {
@@ -127,59 +126,66 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-1 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
         className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-        style={{ background: '#1a1a1a', maxHeight: '90vh' }}
+        style={{ background: '#1a1a1a', height: '98vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-4 py-2 text-sm font-bold flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
-          <span>My<span style={{ color: GREEN }}>Recipe</span>Reels <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400, fontSize: '0.75rem' }}>· Reel Inspiration</span></span>
-          <button onClick={onClose} className="text-lg leading-none" style={{ color: 'rgba(255,255,255,0.5)' }}>✕</button>
+        <div className="px-3 py-1 text-xs font-bold flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
+          <span>My<span style={{ color: GREEN }}>Recipe</span>Reels <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400 }}>· Reel Inspiration</span></span>
+          <button onClick={onClose} className="text-base leading-none p-1" style={{ color: 'rgba(255,255,255,0.5)' }}>✕</button>
         </div>
         {/* Video */}
-        <div className="aspect-[9/16] w-full relative" style={{ background: reel.bg }}>
+        <div className="w-full relative flex-1 min-h-0" style={{ background: reel.bg }}>
           <div className="absolute top-1 right-1 z-10 flex flex-col gap-2">
             <button
               onClick={togglePlay}
               className="grid h-9 w-9 place-items-center text-xl"
-              style={{ color: 'rgba(255,255,255,0.9)' }}
+              style={{ color: 'rgba(255,255,255,0.9)', background: 'transparent', border: 'none' }}
             >{playing ? '⏸' : '▶'}</button>
           </div>
           {embedUrl ? (
             <iframe
               ref={iframeRef}
               src={embedUrl}
-              className="w-full h-full"
+              className="absolute inset-0 w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
+              onLoad={() => {
+                setTimeout(() => {
+                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'unMute', args: [] }), '*')
+                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [100] }), '*')
+                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*')
+                }, 1000)
+              }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-8xl">{reel.emoji}</div>
+            <div className="absolute inset-0 flex items-center justify-center text-8xl">{reel.emoji}</div>
           )}
         </div>
 
-        <div className="p-4 space-y-2 overflow-y-auto flex-1">
+        <div className="p-4 space-y-2 flex-shrink-0">
           <div>
-            <div className="font-bold text-white text-lg">{reel.title}</div>
+            <div className="font-bold text-white text-lg">{reel.title.replace(/#\S+/g, '').replace(/\s+/g, ' ').trim()}</div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{reel.creator} · {reel.views} views</span>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
                   onClick={() => onPrev && onPrev()}
                   disabled={!onPrev}
-                  className="w-7 h-7 rounded-full text-base font-bold transition grid place-items-center"
+                  className="w-7 h-7 rounded-full text-lg font-bold transition grid place-items-center"
                   style={{ background: onPrev ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)', color: onPrev ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)' }}
-                >←</button>
+                >‹</button>
                 <button
                   onClick={() => onNext && onNext()}
                   disabled={!onNext}
-                  className="w-7 h-7 rounded-full text-base font-bold transition grid place-items-center"
+                  className="w-7 h-7 rounded-full text-lg font-bold transition grid place-items-center"
                   style={{ background: onNext ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)', color: onNext ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)' }}
-                >→</button>
+                >›</button>
               </div>
             </div>
           </div>
@@ -287,7 +293,6 @@ export default function App() {
     gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   const [activeCuisine, setActiveCuisine] = useState<string | null>(null)
-  const [activeFilter, setActiveFilter] = useState('All')
   const [activeReel, setActiveReel] = useState<Reel | null>(null)
   const [activeCreator, setActiveCreator] = useState<string | null>(null)
   const [saved, setSaved] = useState<Set<string>>(new Set())
@@ -385,8 +390,8 @@ export default function App() {
 
         {/* Nav */}
         <nav className="relative z-10 flex items-center justify-between px-5 md:px-12 py-3" style={{ background: 'rgba(0,0,0,0.45)' }}>
-          <span className="text-2xl font-bold text-white">
-            My<span style={{ color: GREEN }}>Recipe</span>Reels <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 400 }}>· Reel Inspiration</span>
+          <span className="text-lg md:text-2xl font-bold text-white leading-tight">
+            My<span style={{ color: GREEN }}>Recipe</span>Reels<br className="md:hidden" /><span className="whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 400 }}><span className="hidden md:inline"> · </span><span className="md:hidden text-sm"> </span>Reel Inspiration</span>
           </span>
           <div className="hidden md:flex gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
             <span className="cursor-pointer hover:text-white transition">Home</span>
@@ -401,18 +406,19 @@ export default function App() {
 
         {/* Hero content */}
         <div className="relative z-10 px-5 pb-8 pt-6 md:px-12">
-          <div style={{ width: 'fit-content', maxWidth: '100%' }}>
+          <div style={{ display: 'inline-block', maxWidth: '100%' }}>
           <h1 className="text-xl sm:text-3xl md:text-5xl font-bold text-white mb-4 leading-tight whitespace-nowrap" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.9)' }}>
             Search · Save · Shop · Serve
           </h1>
-          <div className="flex gap-2 w-full rounded-2xl p-2" style={{ background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.35)' }}>
+          <div className="flex gap-2 rounded-2xl p-2" style={{ background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.35)' }}>
             <input
               type="text"
+              size={1}
               placeholder="Search pasta, Gordon Ramsay, 30 min meals..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && submitSearch()}
-              className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
+              className="flex-1 min-w-0 bg-transparent px-3 py-2 text-sm outline-none"
               style={{ color: 'rgba(255,255,255,0.9)' }}
             />
             <button
@@ -504,24 +510,6 @@ export default function App() {
           </div>
         </section>
 
-        {/* Filters */}
-        <section>
-          <div className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>Filter</div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {FILTERS.map(f => (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className="text-xs px-3 py-1.5 rounded-full transition flex-shrink-0"
-                style={activeFilter === f
-                  ? { background: GREEN, color: GREEN_LIGHT, border: `1px solid ${GREEN}` }
-                  : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.6)', border: '0.5px solid rgba(255,255,255,0.15)' }}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </section>
 
         {/* Reel Grid */}
         <section ref={gridRef}>
@@ -536,8 +524,8 @@ export default function App() {
               {([
                 { key: 'recipe',    label: 'Recipe Included' },
                 { key: 'favorites', label: 'My Favorites' },
-                { key: 'newest',    label: 'Date Posted' },
-                { key: 'viewed',    label: 'Most Views' },
+                { key: 'newest',    label: 'Recently Posted' },
+                { key: 'viewed',    label: 'Most Viewed' },
                 { key: 'hidden',    label: 'Hidden' },
               ] as const).map(opt => (
                 <button
@@ -548,7 +536,9 @@ export default function App() {
                     ? { background: opt.key === 'hidden' ? '#ef4444' : GREEN, color: '#fff' }
                     : { color: opt.key === 'hidden' ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.4)' }}
                 >
-                  {opt.label}
+                  {opt.key === 'favorites'
+                    ? <><span style={{ color: '#ef4444' }}>♥</span> {opt.label}</>
+                    : opt.label}
                 </button>
               ))}
             </div>
