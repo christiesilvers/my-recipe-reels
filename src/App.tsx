@@ -4,6 +4,7 @@ import { loadCatalog, loadCreators, type Recipe, type CreatorInfo } from './lib/
 import Footer from './components/Footer'
 import AuthModal from './components/AuthModal'
 import { useAuth } from './auth/AuthContext'
+import { loadUserData, saveUserData } from './auth/userData'
 
 const GREEN = '#1D9E75'
 const GREEN_DARK = '#0F6E56'
@@ -92,7 +93,14 @@ function useRatings() {
       return next
     })
   }
-  return { ratings, rate }
+  function mergeRatings(remote: Record<string, number>) {
+    setRatings(prev => {
+      const next = { ...remote, ...prev }
+      localStorage.setItem('reelRatings', JSON.stringify(next))
+      return next
+    })
+  }
+  return { ratings, rate, mergeRatings }
 }
 
 function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave }: {
@@ -292,18 +300,41 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
 }
 
 export default function App() {
-  const { ratings, rate } = useRatings()
+  const { ratings, rate, mergeRatings } = useRatings()
   const { email: authEmail, signOut } = useAuth()
   const [authOpen, setAuthOpen] = useState(false)
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
-  function requireAuth(action: () => void) {
-    if (authEmail) {
-      action()
-    } else {
-      setPendingAction(() => action)
-      setAuthOpen(true)
+  const [showSyncPrompt, setShowSyncPrompt] = useState(false)
+
+  function recordAnonAction() {
+    if (authEmail) return
+    if (localStorage.getItem('syncPromptDismissed') === '1') return
+    const count = parseInt(localStorage.getItem('anonActions') || '0', 10) + 1
+    localStorage.setItem('anonActions', String(count))
+    if (count >= 3) setShowSyncPrompt(true)
+  }
+
+  async function handleAuthSuccess() {
+    setAuthOpen(false)
+    setShowSyncPrompt(false)
+    localStorage.removeItem('anonActions')
+    localStorage.removeItem('syncPromptDismissed')
+    try {
+      const remote = await loadUserData()
+      if (remote) {
+        setSaved(prev => new Set([...prev, ...remote.saved]))
+        setHiddenReels(prev => {
+          const ids = new Set(prev.map(r => r.id))
+          const merged = [...prev, ...remote.hidden.filter(r => !ids.has(r.id))]
+          localStorage.setItem('hiddenReels', JSON.stringify(merged))
+          return merged
+        })
+        mergeRatings(remote.ratings)
+      }
+    } catch {
+      // cloud sync best-effort; local data still works
     }
   }
+
   const [search, setSearch] = useState('')
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -313,13 +344,27 @@ export default function App() {
   const [activeCuisine, setActiveCuisine] = useState<string | null>(null)
   const [activeReel, setActiveReel] = useState<Reel | null>(null)
   const [activeCreator, setActiveCreator] = useState<string | null>(null)
-  const [saved, setSaved] = useState<Set<string>>(new Set())
+  const [saved, setSaved] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('savedReels') || '[]')) } catch { return new Set() }
+  })
   const [hiddenReels, setHiddenReels] = useState<{id: string; title: string; creator: string}[]>(() => {
     try { return JSON.parse(localStorage.getItem('hiddenReels') || '[]') } catch { return [] }
   })
   const hiddenIds = new Set(hiddenReels.map(r => r.id))
 
+  useEffect(() => {
+    localStorage.setItem('savedReels', JSON.stringify([...saved]))
+  }, [saved])
+
+  // Push to the cloud whenever a signed-in user's data changes (also covers
+  // the merge that happens right after signing in/up).
+  useEffect(() => {
+    if (!authEmail) return
+    saveUserData({ saved: [...saved], hidden: hiddenReels, ratings }).catch(() => {})
+  }, [authEmail, saved, hiddenReels, ratings])
+
   function hideReel(reel: Reel) {
+    recordAnonAction()
     setHiddenReels(prev => {
       const next = [...prev, { id: reel.id, title: reel.title, creator: reel.creator }]
       localStorage.setItem('hiddenReels', JSON.stringify(next))
@@ -630,7 +675,7 @@ export default function App() {
                       {[1,2,3,4,5].map(star => (
                         <button
                           key={star}
-                          onClick={() => requireAuth(() => rate(reel.id, star))}
+                          onClick={() => { rate(reel.id, star); recordAnonAction() }}
                           className="text-xs leading-none"
                           style={{ color: star <= (ratings[reel.id] || 0) ? '#FBBF24' : 'rgba(255,255,255,0.2)' }}
                         >★</button>
@@ -654,24 +699,43 @@ export default function App() {
           <ReelModal
             reel={activeReel}
             onClose={() => setActiveReel(null)}
-            onHide={() => requireAuth(() => hideReel(activeReel))}
+            onHide={() => hideReel(activeReel)}
             onPrev={idx > 0 ? () => setActiveReel(filtered[idx - 1]) : null}
             onNext={idx < filtered.length - 1 ? () => setActiveReel(filtered[idx + 1]) : null}
             saved={saved.has(activeReel.id)}
-            onToggleSave={() => requireAuth(() => setSaved(prev => { const n = new Set(prev); n.has(activeReel.id) ? n.delete(activeReel.id) : n.add(activeReel.id); return n }))}
+            onToggleSave={() => {
+              setSaved(prev => { const n = new Set(prev); n.has(activeReel.id) ? n.delete(activeReel.id) : n.add(activeReel.id); return n })
+              recordAnonAction()
+            }}
           />
         )
       })()}
 
       {authOpen && (
         <AuthModal
-          onClose={() => { setAuthOpen(false); setPendingAction(null) }}
-          onSuccess={() => {
-            setAuthOpen(false)
-            pendingAction?.()
-            setPendingAction(null)
-          }}
+          onClose={() => setAuthOpen(false)}
+          onSuccess={handleAuthSuccess}
         />
+      )}
+
+      {showSyncPrompt && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl"
+          style={{ background: '#1a1a1a', border: '0.5px solid rgba(255,255,255,0.12)' }}>
+          <span className="text-2xl">📱💻</span>
+          <div className="flex-1 text-xs" style={{ color: 'rgba(255,255,255,0.8)' }}>
+            Want your cookbook on any device? <span className="font-semibold" style={{ color: GREEN }}>Create your free account</span> — it's free.
+          </div>
+          <button
+            onClick={() => setAuthOpen(true)}
+            className="rounded-full px-3 py-1.5 text-xs font-semibold text-white flex-shrink-0"
+            style={{ background: GREEN }}
+          >Sign up</button>
+          <button
+            onClick={() => { setShowSyncPrompt(false); localStorage.setItem('syncPromptDismissed', '1') }}
+            className="text-sm flex-shrink-0"
+            style={{ color: 'rgba(255,255,255,0.4)' }}
+          >✕</button>
+        </div>
       )}
 
     </div>
