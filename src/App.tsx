@@ -223,6 +223,7 @@ export default function App() {
   const [recipes, setRecipes] = useState<Reel[]>([])
   const [loading, setLoading] = useState(true)
   const [creatorPhotos, setCreatorPhotos] = useState<Map<string, CreatorInfo>>(new Map())
+  const [sortBy, setSortBy] = useState<'popular' | 'watched' | 'newest'>('popular')
   const [favCreators, setFavCreators] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('favCreators') || '[]')) } catch { return new Set() }
   })
@@ -296,7 +297,11 @@ export default function App() {
       if (search && !r.title.toLowerCase().includes(search.toLowerCase()) && !r.creator.toLowerCase().includes(search.toLowerCase())) return false
       return true
     })
-    .sort((a, b) => activeCreator ? parseViews(b.views) - parseViews(a.views) : 0)
+    .sort((a, b) => {
+      if (sortBy === 'watched') return parseViews(b.views) - parseViews(a.views)
+      if (sortBy === 'newest') return parseInt(b.id.replace('recipe-', '')) - parseInt(a.id.replace('recipe-', ''))
+      return 0
+    })
 
   return (
     <div className="text-white" style={{ background: '#0d0d0d' }}>
@@ -463,9 +468,24 @@ export default function App() {
               <button onClick={() => setSearch('')} className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>✕ Clear</button>
             </div>
           )}
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-xs font-medium uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              {activeCreator ? 'Most Popular' : activeCuisine ? `Trending ${activeCuisine} Reels` : search ? 'Search Results' : 'Trending Reels'}
+          <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+            <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              {([
+                { key: 'popular', label: 'Most Popular' },
+                { key: 'watched', label: 'Most Watched' },
+                { key: 'newest',  label: 'Date Posted' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setSortBy(opt.key)}
+                  className="px-3 py-1 rounded-lg text-xs font-semibold transition"
+                  style={sortBy === opt.key
+                    ? { background: GREEN, color: '#fff' }
+                    : { color: 'rgba(255,255,255,0.4)' }}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
             <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{filtered.length} reels</span>
           </div>
