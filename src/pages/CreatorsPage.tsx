@@ -197,6 +197,7 @@ export default function CreatorsPage() {
   const [creators, setCreators] = useState<Creator[]>([])
   const [creatorPhotos, setCreatorPhotos] = useState<Map<string, CreatorInfo>>(new Map())
   const [showAuth, setShowAuth] = useState(false)
+  const [search, setSearch] = useState('')
   const [favCreators, setFavCreators] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('favCreators') || '[]')) } catch { return new Set() }
   })
@@ -230,8 +231,9 @@ export default function CreatorsPage() {
     })
   }
 
-  const faves = creators.filter(c => favCreators.has(c.handle))
-  const rest = creators.filter(c => !favCreators.has(c.handle))
+  const q = search.toLowerCase()
+  const faves = creators.filter(c => favCreators.has(c.handle) && (!q || c.name.toLowerCase().includes(q) || c.handle.toLowerCase().includes(q)))
+  const rest = creators.filter(c => !favCreators.has(c.handle) && (!q || c.name.toLowerCase().includes(q) || c.handle.toLowerCase().includes(q)))
 
   function CreatorCard({ c }: { c: Creator }) {
     const style = creatorStyle(c.handle)
@@ -305,6 +307,25 @@ export default function CreatorsPage() {
           </button>
         </div>
 
+        {/* Search */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search creators..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full rounded-2xl px-4 py-3 text-sm text-white outline-none pr-10"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.12)' }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full"
+              style={{ color: 'rgba(255,255,255,0.4)' }}
+            >✕</button>
+          )}
+        </div>
+
         {/* My Faves */}
         {faves.length > 0 && (
           <section>
@@ -328,7 +349,9 @@ export default function CreatorsPage() {
             <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{creators.length} creators</span>
           </div>
           {rest.length === 0 && faves.length === 0 && (
-            <div className="text-sm py-8 text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>Loading creators...</div>
+            <div className="text-sm py-8 text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              {search ? `No creators found for "${search}"` : 'Loading creators...'}
+            </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {rest.map(c => <CreatorCard key={c.handle} c={c} />)}
