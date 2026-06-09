@@ -211,6 +211,12 @@ function scrapeAll() {
 }
 
 function scrapeCreatorThumbnails() {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('YOUTUBE_API_KEY')
+  if (!apiKey) {
+    SpreadsheetApp.getUi().alert('Missing YOUTUBE_API_KEY in Script Properties. See setup instructions.')
+    return
+  }
+
   var ss = SpreadsheetApp.getActiveSpreadsheet()
   var sheet = ss.getSheetByName('Creators')
   if (!sheet) { sheet = ss.insertSheet('Creators') }
@@ -223,9 +229,16 @@ function scrapeCreatorThumbnails() {
   for (var c = 0; c < FULL_CHANNELS.length; c++) {
     var ch = FULL_CHANNELS[c]
     try {
-      var info = YouTube.Channels.list('snippet', { id: ch.channelId })
-      if (!info.items || !info.items[0]) continue
-      var snippet = info.items[0].snippet
+      var url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet&id=' + ch.channelId + '&key=' + apiKey
+      var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true })
+      var code = response.getResponseCode()
+      if (code !== 200) {
+        Logger.log('HTTP ' + code + ' for ' + ch.creator + ': ' + response.getContentText())
+        continue
+      }
+      var data = JSON.parse(response.getContentText())
+      if (!data.items || !data.items[0]) continue
+      var snippet = data.items[0].snippet
       var thumbUrl = ''
       if (snippet.thumbnails) {
         if (snippet.thumbnails.high) { thumbUrl = snippet.thumbnails.high.url }
