@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 const GREEN = '#4ade80'
-const CONTACT_EMAIL = 'christiesilvers@gmail.com'
+const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL as string
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -11,6 +12,93 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         {children}
       </div>
     </section>
+  )
+}
+
+function ContactModal({ subject, onClose }: { subject: string; onClose: () => void }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
+
+  function send() {
+    const body = `Name: ${name}\nEmail: ${email}\n\n${message}`
+    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    onClose()
+  }
+
+  const inputStyle = {
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    color: 'rgba(255,255,255,0.85)',
+    borderRadius: '10px',
+    padding: '10px 12px',
+    fontSize: '14px',
+    outline: 'none',
+    width: '100%',
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+      onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl p-6 space-y-4"
+        style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)' }}
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-white text-base">{subject}</h2>
+          <button onClick={onClose} style={{ color: 'rgba(255,255,255,0.4)', fontSize: '18px', lineHeight: 1 }}>✕</button>
+        </div>
+        <div className="space-y-3">
+          <input
+            placeholder="Your name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            style={inputStyle}
+          />
+          <input
+            placeholder="Your email address"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            style={inputStyle}
+          />
+          <textarea
+            placeholder="Describe your request in detail..."
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            rows={5}
+            style={{ ...inputStyle, resize: 'vertical' }}
+          />
+        </div>
+        <button
+          onClick={send}
+          disabled={!name || !email || !message}
+          className="w-full rounded-xl py-2.5 text-sm font-semibold transition"
+          style={{
+            background: name && email && message ? GREEN : 'rgba(255,255,255,0.1)',
+            color: name && email && message ? '#000' : 'rgba(255,255,255,0.3)',
+          }}>
+          Open in Email App
+        </button>
+        <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          This will open your email client with your info pre-filled.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function ContactButton({ label, subject }: { label: string; subject: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-block rounded-xl px-4 py-2 text-sm font-semibold mt-2"
+        style={{ background: GREEN, color: '#000' }}>
+        {label}
+      </button>
+      {open && <ContactModal subject={subject} onClose={() => setOpen(false)} />}
+    </>
   )
 }
 
@@ -53,8 +141,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="DMCA Takedown Policy">
-          <p>MyRecipeReels respects the intellectual property rights of content creators. If you believe that content on this site infringes your copyright, please send a written takedown request to the contact address below.</p>
-          <p>Your notice must include:</p>
+          <p>MyRecipeReels respects the intellectual property rights of content creators. If you believe that content on this site infringes your copyright, please submit a written takedown request. Your notice must include:</p>
           <ul className="list-disc pl-5 space-y-1">
             <li>Your name and contact information</li>
             <li>A description of the copyrighted work you claim has been infringed</li>
@@ -63,15 +150,13 @@ export default function TermsPage() {
             <li>A statement, under penalty of perjury, that you are the copyright owner or authorized to act on their behalf</li>
             <li>Your physical or electronic signature</li>
           </ul>
-          <p className="mt-3">
-            Send takedown requests to:{' '}
-            <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: GREEN }}>{CONTACT_EMAIL}</a>
-          </p>
           <p>We will review valid requests and remove or disable access to infringing content promptly.</p>
+          <ContactButton label="Submit a Takedown Request" subject="DMCA Takedown Request – MyRecipeReels" />
         </Section>
 
         <Section title="Contact">
-          <p>For any questions about these terms, please contact us at <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: GREEN }}>{CONTACT_EMAIL}</a>.</p>
+          <p>For any questions about these terms or the site, use the button below.</p>
+          <ContactButton label="Contact Us" subject="MyRecipeReels – General Inquiry" />
         </Section>
       </div>
 
