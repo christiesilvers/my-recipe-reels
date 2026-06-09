@@ -289,24 +289,6 @@ export default function CreatorsPage() {
 
       <div className="px-5 md:px-12 xl:px-24 py-10 space-y-10">
 
-        {/* Creator CTA banner */}
-        <div className="rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-          style={{ background: 'linear-gradient(135deg, rgba(29,158,117,0.15), rgba(29,158,117,0.05))', border: `1px solid rgba(29,158,117,0.3)` }}>
-          <div>
-            <div className="font-bold text-white text-base mb-1">Are you a recipe creator?</div>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              Claim your profile, manage your reels, and connect with your fans on MyRecipeReels.
-            </p>
-          </div>
-          <button
-            onClick={() => setShowAuth(true)}
-            className="flex-shrink-0 rounded-full px-5 py-2.5 text-sm font-semibold text-white whitespace-nowrap"
-            style={{ background: GREEN }}
-          >
-            Claim your profile
-          </button>
-        </div>
-
         {/* Search */}
         <div className="relative">
           <input
