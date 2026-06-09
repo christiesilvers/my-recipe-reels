@@ -468,8 +468,10 @@ export default function App() {
                 onClick={() => setActiveReel(reel)}
               >
                 {/* Thumbnail */}
-                <div className="h-28 md:h-24 flex items-center justify-center text-4xl relative" style={{ background: reel.bg }}>
-                  {reel.emoji}
+                <div className="h-28 md:h-24 relative overflow-hidden" style={{ background: reel.bg }}>
+                  {reel.videoId
+                    ? <img src={`https://img.youtube.com/vi/${reel.videoId}/hqdefault.jpg`} alt={reel.title} className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-4xl">{reel.emoji}</div>}
                   {/* Save button */}
                   <button
                     onClick={e => {
