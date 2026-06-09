@@ -258,7 +258,6 @@ export default function App() {
           <div className="hidden md:flex gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
             <span className="cursor-pointer hover:text-white transition">Browse</span>
             <Link to="/creators" className="hover:text-white transition" style={{ color: 'inherit', textDecoration: 'none' }}>Creators</Link>
-            <span className="cursor-pointer hover:text-white transition">My Cookbook</span>
             <span className="cursor-pointer font-semibold transition" style={{ color: GREEN }}>Sign up</span>
           </div>
           <div className="flex md:hidden gap-3 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>

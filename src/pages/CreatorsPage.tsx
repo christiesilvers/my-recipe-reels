@@ -276,7 +276,6 @@ export default function CreatorsPage() {
         <div className="flex items-center gap-4 text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
           <Link to="/" className="hover:text-white transition" style={{ color: 'inherit', textDecoration: 'none' }}>Browse</Link>
           <Link to="/creators" className="font-semibold" style={{ color: GREEN, textDecoration: 'none' }}>Creators</Link>
-          <span className="cursor-pointer hover:text-white transition">My Cookbook</span>
           <button
             onClick={() => setShowAuth(true)}
             className="font-semibold px-3 py-1 rounded-full text-white"
