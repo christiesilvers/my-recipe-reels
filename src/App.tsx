@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { loadCatalog, loadCreators, type Recipe, type CreatorInfo } from './lib/catalog'
+import Footer from './components/Footer'
 
 const GREEN = '#1D9E75'
 const GREEN_DARK = '#0F6E56'
@@ -607,6 +608,8 @@ export default function App() {
         </section>
 
       </div>
+
+      <Footer />
 
       {activeReel && (() => {
         const idx = filtered.findIndex(r => r.id === activeReel.id)
