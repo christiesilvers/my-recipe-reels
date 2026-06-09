@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { loadCatalog, type Recipe } from './lib/catalog'
+import { loadCatalog, loadCreators, type Recipe, type CreatorInfo } from './lib/catalog'
 
 const GREEN = '#1D9E75'
 const GREEN_DARK = '#0F6E56'
@@ -222,6 +222,7 @@ export default function App() {
   const [saved, setSaved] = useState<Set<string>>(new Set())
   const [recipes, setRecipes] = useState<Reel[]>([])
   const [loading, setLoading] = useState(true)
+  const [creatorPhotos, setCreatorPhotos] = useState<Map<string, CreatorInfo>>(new Map())
   const [favCreators, setFavCreators] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('favCreators') || '[]')) } catch { return new Set() }
   })
@@ -255,6 +256,11 @@ export default function App() {
     loadCatalog().then(data => {
       setRecipes(data.map(toReel))
       setLoading(false)
+    })
+    loadCreators().then(data => {
+      const map = new Map<string, CreatorInfo>()
+      data.forEach(c => map.set(c.handle.toLowerCase(), c))
+      setCreatorPhotos(map)
     })
   }, [])
 
@@ -467,8 +473,9 @@ export default function App() {
                 onClick={() => setActiveReel(reel)}
               >
                 <div className="p-3 flex-1 flex flex-col">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="text-2xl leading-none">{reel.emoji}</span>
+                  {/* Top row: cuisine text + save */}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>{reel.cuisine}</span>
                     <button
                       onClick={e => {
                         e.stopPropagation()
@@ -480,8 +487,26 @@ export default function App() {
                       {saved.has(reel.id) ? '♥' : '♡'}
                     </button>
                   </div>
-                  <div className="text-sm font-semibold text-white leading-snug mb-1 flex-1">{reel.title}</div>
-                  <div className="text-[11px] mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>{reel.creator} · {reel.views} views</div>
+
+                  {/* Title */}
+                  <div className="text-sm font-semibold text-white leading-snug mb-2 flex-1">{reel.title}</div>
+
+                  {/* Creator row */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    {(() => {
+                      const style = creatorStyle(reel.handle)
+                      const photo = style.photo || creatorPhotos.get(reel.handle.toLowerCase())?.thumbnailUrl
+                      return (
+                        <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px]" style={{ background: style.bg }}>
+                          {photo
+                            ? <img src={photo} alt={reel.creator} className="w-full h-full object-cover" />
+                            : style.emoji}
+                        </div>
+                      )
+                    })()}
+                    <span className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>{reel.handle} · {reel.views} views</span>
+                  </div>
+
                   {ratings[reel.videoId] && ratings[reel.videoId].count > 0 && (
                     <div className="flex items-center gap-1 mb-2">
                       <Stars value={ratings[reel.videoId].total / ratings[reel.videoId].count} />
