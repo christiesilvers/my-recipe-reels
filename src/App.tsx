@@ -477,7 +477,7 @@ export default function App() {
           <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
             <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'rgba(255,255,255,0.06)' }}>
               {([
-                { key: 'viewed', label: 'Most Viewed' },
+                { key: 'viewed', label: 'Most Views' },
                 { key: 'rated',  label: 'Top Rated' },
                 { key: 'newest', label: 'Date Posted' },
               ] as const).map(opt => (
