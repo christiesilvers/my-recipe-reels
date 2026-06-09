@@ -49,40 +49,13 @@ function toReel(r: Recipe): Reel {
   }
 }
 
-type RatingData = { total: number; count: number }
 
-function Stars({ value, max = 5, interactive = false, onRate }: {
-  value: number; max?: number; interactive?: boolean; onRate?: (n: number) => void
-}) {
-  const [hover, setHover] = useState(0)
-  const display = hover || value
-  return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: max }, (_, i) => i + 1).map(n => (
-        <span
-          key={n}
-          className={interactive ? 'cursor-pointer text-xl transition-transform hover:scale-125' : 'text-sm'}
-          style={{ color: n <= display ? '#FBBF24' : 'rgba(255,255,255,0.2)' }}
-          onClick={() => interactive && onRate && onRate(n === value ? 0 : n)}
-          onMouseEnter={() => interactive && setHover(n)}
-          onMouseLeave={() => interactive && setHover(0)}
-        >★</span>
-      ))}
-    </div>
-  )
-}
-
-function ReelModal({ reel, rating, userRating, onRate, onClose }: {
+function ReelModal({ reel, onClose }: {
   reel: Reel
-  rating: RatingData | undefined
-  userRating: number | undefined
-  onRate: (stars: number) => void
   onClose: () => void
 }) {
   const [showRecipe, setShowRecipe] = useState(false)
   const [playing, setPlaying] = useState(false)
-  const avg = rating && rating.count > 0 ? rating.total / rating.count : 0
-  const count = rating?.count ?? 0
   const embedUrl = reel.videoId ? `https://www.youtube.com/embed/${reel.videoId}` : null
   const thumbUrl = reel.videoId ? `https://img.youtube.com/vi/${reel.videoId}/hqdefault.jpg` : null
 
@@ -214,33 +187,6 @@ export default function App() {
   const [favCreators, setFavCreators] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('favCreators') || '[]')) } catch { return new Set() }
   })
-  const [ratings, setRatings] = useState<Record<string, RatingData>>(() => {
-    try { return JSON.parse(localStorage.getItem('ratings') || '{}') } catch { return {} }
-  })
-  const [userRatings, setUserRatings] = useState<Record<string, number>>(() => {
-    try { return JSON.parse(localStorage.getItem('userRatings') || '{}') } catch { return {} }
-  })
-
-  function rateRecipe(videoId: string, stars: number) {
-    const prev = userRatings[videoId]
-    setRatings(r => {
-      const existing = r[videoId] ?? { total: 0, count: 0 }
-      const updated = {
-        total: existing.total - (prev ?? 0) + (stars > 0 ? stars : 0),
-        count: existing.count - (prev ? 1 : 0) + (stars > 0 ? 1 : 0),
-      }
-      const next = { ...r, [videoId]: updated }
-      localStorage.setItem('ratings', JSON.stringify(next))
-      return next
-    })
-    setUserRatings(u => {
-      const next = { ...u }
-      if (stars === 0) delete next[videoId]
-      else next[videoId] = stars
-      localStorage.setItem('userRatings', JSON.stringify(next))
-      return next
-    })
-  }
 
   useEffect(() => {
     loadCatalog().then(data => {
@@ -544,9 +490,6 @@ export default function App() {
       {activeReel && (
         <ReelModal
           reel={activeReel}
-          rating={ratings[activeReel.videoId]}
-          userRating={userRatings[activeReel.videoId]}
-          onRate={stars => rateRecipe(activeReel.videoId, stars)}
           onClose={() => setActiveReel(null)}
         />
       )}
