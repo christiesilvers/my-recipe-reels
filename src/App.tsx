@@ -158,8 +158,11 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
               allowFullScreen
               onLoad={() => {
                 setTimeout(() => {
-                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'unMute', args: [] }), '*')
-                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [100] }), '*')
+                  const isMobile = navigator.maxTouchPoints > 0
+                  if (!isMobile) {
+                    iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'unMute', args: [] }), '*')
+                    iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [100] }), '*')
+                  }
                   iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*')
                 }, 1000)
               }}
