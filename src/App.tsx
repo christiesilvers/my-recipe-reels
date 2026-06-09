@@ -105,7 +105,7 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
   const [showRecipe, setShowRecipe] = useState(false)
   const [playing, setPlaying] = useState(true)
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const embedUrl = reel.videoId ? `https://www.youtube-nocookie.com/embed/${reel.videoId}?autoplay=1&rel=0&enablejsapi=1&playsinline=1` : null
+  const embedUrl = reel.videoId ? `https://www.youtube-nocookie.com/embed/${reel.videoId}?autoplay=1&mute=1&rel=0&enablejsapi=1&playsinline=1` : null
 
 
   function togglePlay() {
@@ -156,6 +156,14 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
               className="absolute inset-0 w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
+              onLoad={() => {
+                if (navigator.maxTouchPoints > 0) return
+                setTimeout(() => {
+                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'unMute', args: [] }), '*')
+                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [100] }), '*')
+                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*')
+                }, 1000)
+              }}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-8xl">{reel.emoji}</div>
