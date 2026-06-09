@@ -463,33 +463,28 @@ export default function App() {
             {filtered.map(reel => (
               <div
                 key={reel.id}
-                className="rounded-2xl overflow-hidden cursor-pointer group transition hover:scale-[1.02]"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)' }}
+                className="rounded-2xl cursor-pointer transition hover:scale-[1.02] flex flex-col justify-between"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', minHeight: 130 }}
                 onClick={() => setActiveReel(reel)}
               >
-                {/* Thumbnail */}
-                <div className="aspect-video relative overflow-hidden" style={{ background: reel.bg }}>
-                  {reel.videoId
-                    ? <img src={`https://img.youtube.com/vi/${reel.videoId}/hqdefault.jpg`} alt={reel.title} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center text-4xl">{reel.emoji}</div>}
-                  {/* Save button */}
-                  <button
-                    onClick={e => {
-                      e.stopPropagation()
-                      setSaved(prev => { const n = new Set(prev); n.has(reel.id) ? n.delete(reel.id) : n.add(reel.id); return n })
-                    }}
-                    className="absolute top-2 right-2 grid h-7 w-7 place-items-center rounded-full text-sm"
-                    style={{ background: 'rgba(0,0,0,0.5)', color: saved.has(reel.id) ? '#ef4444' : '#fff' }}
-                  >
-                    {saved.has(reel.id) ? '♥' : '♡'}
-                  </button>
-                </div>
-
-                <div className="p-2.5">
-                  <div className="text-xs font-semibold text-white mb-0.5 leading-tight">{reel.title}</div>
-                  <div className="text-[11px] mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>{reel.creator} · {reel.views} views</div>
+                <div className="p-3 flex-1 flex flex-col">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="text-2xl leading-none">{reel.emoji}</span>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        setSaved(prev => { const n = new Set(prev); n.has(reel.id) ? n.delete(reel.id) : n.add(reel.id); return n })
+                      }}
+                      className="text-base leading-none flex-shrink-0"
+                      style={{ color: saved.has(reel.id) ? '#ef4444' : 'rgba(255,255,255,0.25)' }}
+                    >
+                      {saved.has(reel.id) ? '♥' : '♡'}
+                    </button>
+                  </div>
+                  <div className="text-sm font-semibold text-white leading-snug mb-1 flex-1">{reel.title}</div>
+                  <div className="text-[11px] mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>{reel.creator} · {reel.views} views</div>
                   {ratings[reel.videoId] && ratings[reel.videoId].count > 0 && (
-                    <div className="flex items-center gap-1 mb-1">
+                    <div className="flex items-center gap-1 mb-2">
                       <Stars value={ratings[reel.videoId].total / ratings[reel.videoId].count} />
                       <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>({ratings[reel.videoId].count})</span>
                     </div>
