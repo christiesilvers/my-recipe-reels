@@ -8,14 +8,14 @@ const GREEN_DARK = '#0F6E56'
 const GREEN_LIGHT = '#E1F5EE'
 
 const CUISINES = [
-  { name: 'Italian',       emoji: '🍝', bg: '#fff8f0' },
-  { name: 'Asian',         emoji: '🍜', bg: '#f0f8ff' },
-  { name: 'Mexican',       emoji: '🌮', bg: '#fff5f0' },
-  { name: 'Desserts',      emoji: '🍰', bg: '#fdf5ff' },
-  { name: 'American',      emoji: '🍔', bg: '#f0fff4' },
-  { name: 'Mediterranean', emoji: '🥙', bg: '#f0faff' },
-  { name: 'Indian',        emoji: '🍛', bg: '#fffaf0' },
-  { name: 'Breakfast',     emoji: '🥞', bg: '#fffff0' },
+  { name: 'Italian',       emoji: '🍝', bg: '#fff8f0', image: '/cuisines/italian.jpg' },
+  { name: 'Asian',         emoji: '🍜', bg: '#f0f8ff', image: '/cuisines/asian.jpg' },
+  { name: 'Mexican',       emoji: '🌮', bg: '#fff5f0', image: '/cuisines/mexican.jpg' },
+  { name: 'Desserts',      emoji: '🍰', bg: '#fdf5ff', image: '/cuisines/desserts.jpg' },
+  { name: 'American',      emoji: '🍔', bg: '#f0fff4', image: '/cuisines/american.jpg' },
+  { name: 'Mediterranean', emoji: '🥙', bg: '#f0faff', image: '/cuisines/mediterranean.jpg' },
+  { name: 'Indian',        emoji: '🍛', bg: '#fffaf0', image: '/cuisines/indian.jpg' },
+  { name: 'Breakfast',     emoji: '🥞', bg: '#fffff0', image: '/cuisines/breakfast.jpg' },
 ]
 
 
@@ -490,7 +490,14 @@ export default function App() {
 
         {/* Browse by Cuisine */}
         <section>
-          <div className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>Browse by Cuisine</div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs font-medium uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>Browse by Cuisine</div>
+            {activeCuisine && (
+              <button className="text-xs" style={{ color: GREEN }} onClick={() => setActiveCuisine(null)}>
+                Clear filter
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
             {CUISINES.map(c => (
               <button
@@ -502,8 +509,8 @@ export default function App() {
                   border: activeCuisine === c.name ? `1.5px solid ${GREEN}` : '0.5px solid rgba(255,255,255,0.1)',
                 }}
               >
-                <div className="h-14 flex items-center justify-center text-3xl" style={{ background: c.bg }}>
-                  {c.emoji}
+                <div className="h-14 md:h-20 overflow-hidden">
+                  <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="text-[11px] font-medium py-1.5 px-1" style={{ color: activeCuisine === c.name ? GREEN : 'rgba(255,255,255,0.8)' }}>
                   {c.name}
