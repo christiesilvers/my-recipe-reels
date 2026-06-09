@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { loadCatalog, loadCreators, type Recipe, type CreatorInfo } from './lib/catalog'
 import Footer from './components/Footer'
+import AuthModal from './components/AuthModal'
+import { useAuth } from './auth/AuthContext'
 
 const GREEN = '#1D9E75'
 const GREEN_DARK = '#0F6E56'
@@ -291,6 +293,17 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
 
 export default function App() {
   const { ratings, rate } = useRatings()
+  const { email: authEmail, signOut } = useAuth()
+  const [authOpen, setAuthOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
+  function requireAuth(action: () => void) {
+    if (authEmail) {
+      action()
+    } else {
+      setPendingAction(() => action)
+      setAuthOpen(true)
+    }
+  }
   const [search, setSearch] = useState('')
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -401,11 +414,24 @@ export default function App() {
           <div className="hidden md:flex gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
             <span className="cursor-pointer hover:text-white transition">Home</span>
             <Link to="/creators" className="hover:text-white transition" style={{ color: 'inherit', textDecoration: 'none' }}>Creators</Link>
-            <span className="cursor-pointer font-semibold transition" style={{ color: GREEN }}>Sign up</span>
+            <span
+              className="cursor-pointer font-semibold transition"
+              style={{ color: GREEN }}
+              onClick={() => authEmail ? signOut() : setAuthOpen(true)}
+              title={authEmail ? `Signed in as ${authEmail} — click to sign out` : undefined}
+            >
+              {authEmail ? 'Sign out' : 'Sign up'}
+            </span>
           </div>
           <div className="flex md:hidden gap-3 text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
             <Link to="/creators" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>Creators</Link>
-            <span className="cursor-pointer" style={{ color: GREEN }}>Sign up</span>
+            <span
+              className="cursor-pointer"
+              style={{ color: GREEN }}
+              onClick={() => authEmail ? signOut() : setAuthOpen(true)}
+            >
+              {authEmail ? 'Sign out' : 'Sign up'}
+            </span>
           </div>
         </nav>
 
@@ -604,7 +630,7 @@ export default function App() {
                       {[1,2,3,4,5].map(star => (
                         <button
                           key={star}
-                          onClick={() => rate(reel.id, star)}
+                          onClick={() => requireAuth(() => rate(reel.id, star))}
                           className="text-xs leading-none"
                           style={{ color: star <= (ratings[reel.id] || 0) ? '#FBBF24' : 'rgba(255,255,255,0.2)' }}
                         >★</button>
@@ -628,14 +654,25 @@ export default function App() {
           <ReelModal
             reel={activeReel}
             onClose={() => setActiveReel(null)}
-            onHide={() => hideReel(activeReel)}
+            onHide={() => requireAuth(() => hideReel(activeReel))}
             onPrev={idx > 0 ? () => setActiveReel(filtered[idx - 1]) : null}
             onNext={idx < filtered.length - 1 ? () => setActiveReel(filtered[idx + 1]) : null}
             saved={saved.has(activeReel.id)}
-            onToggleSave={() => setSaved(prev => { const n = new Set(prev); n.has(activeReel.id) ? n.delete(activeReel.id) : n.add(activeReel.id); return n })}
+            onToggleSave={() => requireAuth(() => setSaved(prev => { const n = new Set(prev); n.has(activeReel.id) ? n.delete(activeReel.id) : n.add(activeReel.id); return n }))}
           />
         )
       })()}
+
+      {authOpen && (
+        <AuthModal
+          onClose={() => { setAuthOpen(false); setPendingAction(null) }}
+          onSuccess={() => {
+            setAuthOpen(false)
+            pendingAction?.()
+            setPendingAction(null)
+          }}
+        />
+      )}
 
     </div>
   )
