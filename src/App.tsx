@@ -223,7 +223,7 @@ export default function App() {
   const [recipes, setRecipes] = useState<Reel[]>([])
   const [loading, setLoading] = useState(true)
   const [creatorPhotos, setCreatorPhotos] = useState<Map<string, CreatorInfo>>(new Map())
-  const [sortBy, setSortBy] = useState<'popular' | 'watched' | 'newest'>('popular')
+  const [sortBy, setSortBy] = useState<'viewed' | 'rated' | 'newest'>('viewed')
   const [favCreators, setFavCreators] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('favCreators') || '[]')) } catch { return new Set() }
   })
@@ -298,7 +298,13 @@ export default function App() {
       return true
     })
     .sort((a, b) => {
-      if (sortBy === 'watched') return parseViews(b.views) - parseViews(a.views)
+      if (sortBy === 'viewed') return parseViews(b.views) - parseViews(a.views)
+      if (sortBy === 'rated') {
+        const ra = ratings[a.videoId], rb = ratings[b.videoId]
+        const avgA = ra && ra.count > 0 ? ra.total / ra.count : 0
+        const avgB = rb && rb.count > 0 ? rb.total / rb.count : 0
+        return avgB - avgA
+      }
       if (sortBy === 'newest') return parseInt(b.id.replace('recipe-', '')) - parseInt(a.id.replace('recipe-', ''))
       return 0
     })
@@ -471,9 +477,9 @@ export default function App() {
           <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
             <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'rgba(255,255,255,0.06)' }}>
               {([
-                { key: 'popular', label: 'Most Popular' },
-                { key: 'watched', label: 'Most Watched' },
-                { key: 'newest',  label: 'Date Posted' },
+                { key: 'viewed', label: 'Most Viewed' },
+                { key: 'rated',  label: 'Top Rated' },
+                { key: 'newest', label: 'Date Posted' },
               ] as const).map(opt => (
                 <button
                   key={opt.key}
