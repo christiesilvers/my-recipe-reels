@@ -63,7 +63,7 @@ function Stars({ value, max = 5, interactive = false, onRate }: {
           key={n}
           className={interactive ? 'cursor-pointer text-xl transition-transform hover:scale-125' : 'text-sm'}
           style={{ color: n <= display ? '#FBBF24' : 'rgba(255,255,255,0.2)' }}
-          onClick={() => interactive && onRate && onRate(n)}
+          onClick={() => interactive && onRate && onRate(n === value ? 0 : n)}
           onMouseEnter={() => interactive && setHover(n)}
           onMouseLeave={() => interactive && setHover(0)}
         >★</span>
@@ -239,15 +239,17 @@ export default function App() {
     setRatings(r => {
       const existing = r[videoId] ?? { total: 0, count: 0 }
       const updated = {
-        total: existing.total - (prev ?? 0) + stars,
-        count: existing.count - (prev ? 1 : 0) + 1,
+        total: existing.total - (prev ?? 0) + (stars > 0 ? stars : 0),
+        count: existing.count - (prev ? 1 : 0) + (stars > 0 ? 1 : 0),
       }
       const next = { ...r, [videoId]: updated }
       localStorage.setItem('ratings', JSON.stringify(next))
       return next
     })
     setUserRatings(u => {
-      const next = { ...u, [videoId]: stars }
+      const next = { ...u }
+      if (stars === 0) delete next[videoId]
+      else next[videoId] = stars
       localStorage.setItem('userRatings', JSON.stringify(next))
       return next
     })
