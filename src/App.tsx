@@ -102,10 +102,11 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
   saved: boolean
   onToggleSave: () => void
 }) {
+  const isMobile = navigator.maxTouchPoints > 0
   const [showRecipe, setShowRecipe] = useState(false)
-  const [playing, setPlaying] = useState(true)
+  const [playing, setPlaying] = useState(!isMobile)
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const embedUrl = reel.videoId ? `https://www.youtube-nocookie.com/embed/${reel.videoId}?autoplay=1&mute=1&rel=0&enablejsapi=1` : null
+  const embedUrl = reel.videoId ? `https://www.youtube-nocookie.com/embed/${reel.videoId}?${isMobile ? '' : 'autoplay=1&mute=1&'}rel=0&enablejsapi=1` : null
 
 
   function togglePlay() {
@@ -157,11 +158,10 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               onLoad={() => {
+                if (isMobile) return
                 setTimeout(() => {
-                  if (navigator.maxTouchPoints === 0) {
-                    iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'unMute', args: [] }), '*')
-                    iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [100] }), '*')
-                  }
+                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'unMute', args: [] }), '*')
+                  iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [100] }), '*')
                   iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*')
                 }, 1000)
               }}
