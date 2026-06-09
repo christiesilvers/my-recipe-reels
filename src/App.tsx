@@ -19,10 +19,10 @@ const CUISINES = [
 
 const FILTERS = ['All', 'Under 30 min', 'Vegan', '5 ingredients', 'Meal prep', 'Date night', 'Cocktails']
 
-const CREATOR_STYLE: Record<string, { emoji: string; bg: string }> = {
-  '@justineskitchen': { emoji: '👩‍🍳', bg: '#1a120a' },
-  '@holmescooking':   { emoji: '👨‍🍳', bg: '#0a1a0a' },
-  '@coreyalicia':     { emoji: '👩‍🍳', bg: '#1a0a1a' },
+const CREATOR_STYLE: Record<string, { emoji: string; bg: string; photo?: string }> = {
+  '@justineskitchen': { emoji: '👩‍🍳', bg: '#1a120a', photo: 'https://yt3.googleusercontent.com/ZdF6Eb_669kPPK96Adf4RT8JWAI1XU55RXNJ91lcGX3Ctb0GiRwHGzbjFCYFcgC4rGqX7lKCqw=s200-c-k-c0x00ffffff-no-rj' },
+  '@holmescooking':   { emoji: '👨‍🍳', bg: '#0a1a0a', photo: 'https://yt3.googleusercontent.com/hRntz7c5x7Hl2eW3MyOrNGFiXSJ9uXmq7iaNfgvV31vSDf8QWS9Vc88jX8xE9ZkFvYw6ZMyq=s200-c-k-c0x00ffffff-no-rj' },
+  '@coreyalicia':     { emoji: '👩‍🍳', bg: '#1a0a1a', photo: 'https://yt3.googleusercontent.com/bQHLbYPYL7kUpEN_5iyADihYa89vHGBvWr1_JweF_yQ78NNmGy1HKyp239LMxfuYfocaD2CSGA=s200-c-k-c0x00ffffff-no-rj' },
 }
 
 function creatorStyle(handle: string) {
@@ -375,8 +375,10 @@ export default function App() {
                     }}
                     onClick={() => setActiveCreator(isActive ? null : c.handle)}
                   >
-                    <div className="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-2xl" style={{ background: style.bg, border: '1.5px solid rgba(255,255,255,0.1)' }}>
-                      {style.emoji}
+                    <div className="w-12 h-12 rounded-full mx-auto mb-2 overflow-hidden flex items-center justify-center text-2xl" style={{ background: style.bg, border: '1.5px solid rgba(255,255,255,0.1)' }}>
+                      {style.photo
+                        ? <img src={style.photo} alt={c.name} className="w-full h-full object-cover" />
+                        : style.emoji}
                     </div>
                     <div className="text-xs font-medium text-white mb-0.5 truncate" style={{ maxWidth: 90 }}>{c.handle}</div>
                     <div className="text-[11px] mb-2 truncate" style={{ color: 'rgba(255,255,255,0.4)', maxWidth: 90 }}>{c.name}</div>

@@ -4,10 +4,10 @@ import { loadCatalog, loadCreators, type Recipe, type CreatorInfo } from '../lib
 
 const GREEN = '#1D9E75'
 
-const CREATOR_STYLE: Record<string, { emoji: string; bg: string }> = {
-  '@justineskitchen': { emoji: '👩‍🍳', bg: '#1a120a' },
-  '@holmescooking':   { emoji: '👨‍🍳', bg: '#0a1a0a' },
-  '@coreyalicia':     { emoji: '👩‍🍳', bg: '#1a0a1a' },
+const CREATOR_STYLE: Record<string, { emoji: string; bg: string; photo?: string }> = {
+  '@justineskitchen': { emoji: '👩‍🍳', bg: '#1a120a', photo: 'https://yt3.googleusercontent.com/ZdF6Eb_669kPPK96Adf4RT8JWAI1XU55RXNJ91lcGX3Ctb0GiRwHGzbjFCYFcgC4rGqX7lKCqw=s200-c-k-c0x00ffffff-no-rj' },
+  '@holmescooking':   { emoji: '👨‍🍳', bg: '#0a1a0a', photo: 'https://yt3.googleusercontent.com/hRntz7c5x7Hl2eW3MyOrNGFiXSJ9uXmq7iaNfgvV31vSDf8QWS9Vc88jX8xE9ZkFvYw6ZMyq=s200-c-k-c0x00ffffff-no-rj' },
+  '@coreyalicia':     { emoji: '👩‍🍳', bg: '#1a0a1a', photo: 'https://yt3.googleusercontent.com/bQHLbYPYL7kUpEN_5iyADihYa89vHGBvWr1_JweF_yQ78NNmGy1HKyp239LMxfuYfocaD2CSGA=s200-c-k-c0x00ffffff-no-rj' },
 }
 
 function creatorStyle(handle: string) {
@@ -243,8 +243,8 @@ export default function CreatorsPage() {
         style={{ background: 'rgba(255,255,255,0.04)', border: isFav ? `1px solid ${GREEN}` : '0.5px solid rgba(255,255,255,0.1)' }}
       >
         <div className="w-14 h-14 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-3xl" style={{ background: style.bg }}>
-          {photo?.thumbnailUrl
-            ? <img src={photo.thumbnailUrl} alt={c.name} className="w-full h-full object-cover" />
+          {(style.photo || photo?.thumbnailUrl)
+            ? <img src={style.photo || photo?.thumbnailUrl} alt={c.name} className="w-full h-full object-cover" />
             : style.emoji}
         </div>
         <div className="flex-1 min-w-0">
