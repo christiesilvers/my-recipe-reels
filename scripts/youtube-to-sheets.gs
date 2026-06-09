@@ -293,3 +293,159 @@ function resetChannelProgress() {
   }
   SpreadsheetApp.getUi().alert('Progress reset. Next scrapeChannels run starts from the beginning.')
 }
+
+function getTranscript(videoId) {
+  try {
+    var url = 'https://www.youtube.com/api/timedtext?v=' + videoId + '&lang=en&fmt=json3'
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true })
+    if (response.getResponseCode() !== 200) return null
+    var data = JSON.parse(response.getContentText())
+    if (!data.events) return null
+    var text = data.events
+      .filter(function(e) { return e.segs })
+      .map(function(e) { return e.segs.map(function(s) { return s.utf8 }).join('') })
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    return text.length > 100 ? text : null
+  } catch(e) {
+    return null
+  }
+}
+
+function extractRecipeWithClaude(transcript, title) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY')
+  if (!apiKey) return null
+  try {
+    var prompt = 'You are a recipe extraction assistant. Extract the recipe from this YouTube video transcript.\n\nVideo title: ' + title + '\n\nTranscript:\n' + transcript.substring(0, 3000) + '\n\nReturn ONLY a JSON object with this exact structure (no markdown, no extra text):\n{"ingredients":["item 1","item 2"],"steps":["step 1","step 2"],"servings":"4","time":"30 minutes"}\n\nIf no clear recipe is found, return: {"error":"no recipe"}'
+    var response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+      method: 'post',
+      muteHttpExceptions: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      payload: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    })
+    if (response.getResponseCode() !== 200) {
+      Logger.log('Claude API error: ' + response.getContentText())
+      return null
+    }
+    var result = JSON.parse(response.getContentText())
+    var text = result.content && result.content[0] && result.content[0].text
+    if (!text) return null
+    var recipe = JSON.parse(text)
+    if (recipe.error) return null
+    return JSON.stringify(recipe)
+  } catch(e) {
+    Logger.log('Claude error: ' + e)
+    return null
+  }
+}
+
+function scrapeRecipesTest() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet()
+  var sheet = ss.getSheetByName(SHEET_NAME)
+  var lastRow = sheet.getLastRow()
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+
+  var recipeCol = headers.indexOf('Recipe') + 1
+  if (recipeCol === 0) {
+    sheet.getRange(1, headers.length + 1).setValue('Recipe')
+    recipeCol = headers.length + 1
+    headers.push('Recipe')
+  }
+
+  var titleCol = headers.indexOf('Title') + 1
+  var videoIdCol = headers.indexOf('VideoID') + 1
+  var handleCol = headers.indexOf('Handle') + 1
+  var tested = 0
+  var added = 0
+
+  for (var i = 2; i <= lastRow && tested < 5; i++) {
+    var handle = sheet.getRange(i, handleCol).getValue()
+    if (handle !== '@holmescooking') continue
+
+    var videoId = sheet.getRange(i, videoIdCol).getValue()
+    var title = sheet.getRange(i, titleCol).getValue()
+    if (!videoId) continue
+
+    Logger.log('Testing: ' + title + ' (' + videoId + ')')
+    var transcript = getTranscript(videoId)
+    if (!transcript) {
+      Logger.log('No transcript for ' + videoId)
+      sheet.getRange(i, recipeCol).setValue('NO_TRANSCRIPT')
+      tested++
+      continue
+    }
+    Logger.log('Transcript found (' + transcript.length + ' chars), calling Claude...')
+    var recipe = extractRecipeWithClaude(transcript, title)
+    sheet.getRange(i, recipeCol).setValue(recipe || 'NO_RECIPE')
+    if (recipe) {
+      added++
+      Logger.log('Recipe extracted: ' + recipe.substring(0, 100))
+    }
+    tested++
+    Utilities.sleep(500)
+  }
+
+  SpreadsheetApp.getUi().alert('Test done! Tried ' + tested + ' Holmes Cooking videos, extracted ' + added + ' recipes. Check the Execution Log for details.')
+}
+
+function scrapeRecipes() {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY')
+  if (!apiKey) {
+    SpreadsheetApp.getUi().alert('Missing ANTHROPIC_API_KEY in Script Properties.')
+    return
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet()
+  var sheet = ss.getSheetByName(SHEET_NAME)
+  var lastRow = sheet.getLastRow()
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+
+  var recipeCol = headers.indexOf('Recipe') + 1
+  if (recipeCol === 0) {
+    sheet.getRange(1, headers.length + 1).setValue('Recipe')
+    recipeCol = headers.length + 1
+  }
+
+  var titleCol = headers.indexOf('Title') + 1
+  var videoIdCol = headers.indexOf('VideoID') + 1
+  var MAX_PER_RUN = 50
+  var processed = 0
+  var added = 0
+  var skipped = 0
+  var noTranscript = 0
+
+  for (var i = 2; i <= lastRow && processed < MAX_PER_RUN; i++) {
+    var existing = sheet.getRange(i, recipeCol).getValue()
+    if (existing) { skipped++; continue }
+
+    var videoId = sheet.getRange(i, videoIdCol).getValue()
+    var title = sheet.getRange(i, titleCol).getValue()
+    if (!videoId) continue
+
+    var transcript = getTranscript(videoId)
+    if (!transcript) {
+      sheet.getRange(i, recipeCol).setValue('NO_TRANSCRIPT')
+      noTranscript++
+      processed++
+      Utilities.sleep(200)
+      continue
+    }
+
+    var recipe = extractRecipeWithClaude(transcript, title)
+    sheet.getRange(i, recipeCol).setValue(recipe || 'NO_RECIPE')
+    if (recipe) added++
+    processed++
+    Utilities.sleep(500)
+  }
+
+  SpreadsheetApp.getUi().alert('Done! Extracted ' + added + ' recipes. No transcript: ' + noTranscript + '. Already done: ' + skipped + '. Run again to continue.')
+}
