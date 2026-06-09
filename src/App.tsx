@@ -96,14 +96,13 @@ function ReelModal({ reel, rating, userRating, onRate, onClose }: {
         style={{ background: '#1a1a1a' }}
         onClick={e => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          className="absolute -top-10 right-0 grid h-8 w-8 place-items-center rounded-full text-white"
-          style={{ background: 'rgba(255,255,255,0.15)' }}
-        >✕</button>
-
         {/* Video */}
         <div className="aspect-[9/16] w-full relative" style={{ background: reel.bg }}>
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 z-10 grid h-8 w-8 place-items-center rounded-full text-white"
+            style={{ background: 'rgba(0,0,0,0.6)' }}
+          >✕</button>
           {playing && embedUrl ? (
             <iframe
               src={embedUrl + '?autoplay=1&rel=0'}
