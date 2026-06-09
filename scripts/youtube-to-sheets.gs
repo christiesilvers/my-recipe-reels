@@ -218,50 +218,72 @@ function scrapeCreatorThumbnails() {
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet()
-  var sheet = ss.getSheetByName('Creators')
-  if (!sheet) { sheet = ss.insertSheet('Creators') }
+  var reelsSheet = ss.getSheetByName(SHEET_NAME)
+  if (!reelsSheet) { SpreadsheetApp.getUi().alert('No Reels sheet found.'); return }
 
-  sheet.clearContents()
-  sheet.getRange(1, 1, 1, 4).setValues([['Handle', 'Name', 'ThumbnailUrl', 'ChannelUrl']])
+  var lastRow = reelsSheet.getLastRow()
+  if (lastRow < 2) { SpreadsheetApp.getUi().alert('No data in Reels sheet.'); return }
+
+  var data = reelsSheet.getRange(2, 2, lastRow - 1, 2).getValues()
+  var seen = {}
+  var creators = []
+  for (var i = 0; i < data.length; i++) {
+    var name = String(data[i][0]).trim()
+    var handle = String(data[i][1]).trim()
+    if (!handle || seen[handle]) continue
+    seen[handle] = true
+    creators.push({ name: name, handle: handle })
+  }
+  Logger.log('Found ' + creators.length + ' unique creators in Reels sheet')
+
+  var creatorSheet = ss.getSheetByName('Creators')
+  if (!creatorSheet) { creatorSheet = ss.insertSheet('Creators') }
+  creatorSheet.clearContents()
+  creatorSheet.getRange(1, 1, 1, 4).setValues([['Handle', 'Name', 'ThumbnailUrl', 'ChannelUrl']])
 
   var rows = []
+  var failed = 0
 
-  for (var c = 0; c < FULL_CHANNELS.length; c++) {
-    var ch = FULL_CHANNELS[c]
+  for (var c = 0; c < creators.length; c++) {
+    var cr = creators[c]
+    var cleanHandle = cr.handle.replace(/^@/, '')
     try {
-      var url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet&id=' + ch.channelId + '&key=' + apiKey
+      var url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet&forHandle=' + encodeURIComponent(cleanHandle) + '&key=' + apiKey
       var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true })
       var code = response.getResponseCode()
       if (code !== 200) {
-        Logger.log('HTTP ' + code + ' for ' + ch.creator + ': ' + response.getContentText())
+        Logger.log('HTTP ' + code + ' for ' + cr.handle + ': ' + response.getContentText())
+        failed++
+        Utilities.sleep(500)
         continue
       }
-      var data = JSON.parse(response.getContentText())
-      if (!data.items || !data.items[0]) continue
-      var snippet = data.items[0].snippet
+      var result = JSON.parse(response.getContentText())
+      if (!result.items || !result.items[0]) {
+        Logger.log('No channel found for handle: ' + cr.handle)
+        failed++
+        Utilities.sleep(300)
+        continue
+      }
+      var snippet = result.items[0].snippet
       var thumbUrl = ''
       if (snippet.thumbnails) {
         if (snippet.thumbnails.high) { thumbUrl = snippet.thumbnails.high.url }
         else if (snippet.thumbnails.medium) { thumbUrl = snippet.thumbnails.medium.url }
         else if (snippet.thumbnails.default) { thumbUrl = snippet.thumbnails.default.url }
       }
-      rows.push([
-        ch.handle,
-        ch.creator,
-        thumbUrl,
-        'https://www.youtube.com/@' + ch.handle.replace('@', '')
-      ])
+      rows.push([cr.handle, snippet.title || cr.name, thumbUrl, 'https://www.youtube.com/@' + cleanHandle])
       Utilities.sleep(300)
     } catch (e) {
-      Logger.log('Error fetching thumbnail for ' + ch.creator + ': ' + e)
+      Logger.log('Error for ' + cr.handle + ': ' + e)
+      failed++
     }
   }
 
   if (rows.length > 0) {
-    sheet.getRange(2, 1, rows.length, 4).setValues(rows)
+    creatorSheet.getRange(2, 1, rows.length, 4).setValues(rows)
   }
 
-  SpreadsheetApp.getUi().alert('Done! Saved thumbnails for ' + rows.length + ' creators in the Creators tab.')
+  SpreadsheetApp.getUi().alert('Done! Saved ' + rows.length + ' creator photos. ' + failed + ' not found.')
 }
 
 function resetChannelProgress() {
