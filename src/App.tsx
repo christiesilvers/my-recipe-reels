@@ -465,7 +465,7 @@ export default function App() {
           )}
           <div className="flex items-center justify-between mb-3">
             <div className="text-xs font-medium uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              {activeCuisine ? `Trending ${activeCuisine} Reels` : search ? 'Search Results' : 'Trending Reels'}
+              {activeCreator ? 'Most Popular' : activeCuisine ? `Trending ${activeCuisine} Reels` : search ? 'Search Results' : 'Trending Reels'}
             </div>
             <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{filtered.length} reels</span>
           </div>
