@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { loadCatalog, loadCreators, type Recipe, type CreatorInfo } from '../lib/catalog'
 
 const GREEN = '#1D9E75'
-const GREEN_DARK = '#0F6E56'
 
 const CREATOR_STYLE: Record<string, { emoji: string; bg: string }> = {
   '@justineskitchen': { emoji: '👩‍🍳', bg: '#1a120a' },
