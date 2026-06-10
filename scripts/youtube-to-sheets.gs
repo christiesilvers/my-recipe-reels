@@ -16,6 +16,7 @@ var SEARCHES = [
   { query: 'mediterranean recipe short',      cuisine: 'Mediterranean' },
   { query: 'indian curry recipe reel',        cuisine: 'Indian'        },
   { query: 'breakfast pancakes recipe short', cuisine: 'Breakfast'     },
+  { query: 'instant pot recipe short',        cuisine: 'American'      },
 ]
 
 function getSheet() {
