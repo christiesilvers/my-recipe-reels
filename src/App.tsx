@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import Fuse from 'fuse.js'
 import { Link } from 'react-router-dom'
 import { loadCatalog, loadCreators, type Recipe, type CreatorInfo } from './lib/catalog'
 import Footer from './components/Footer'
@@ -383,6 +384,11 @@ export default function App() {
   }
   const [recipes, setRecipes] = useState<Reel[]>([])
   const [loading, setLoading] = useState(true)
+  const searchIndex = useMemo(() => new Fuse(recipes, {
+    keys: ['title', 'creator', 'cuisine'],
+    threshold: 0.35,
+    ignoreLocation: true,
+  }), [recipes])
   const [creatorPhotos, setCreatorPhotos] = useState<Map<string, CreatorInfo>>(new Map())
   const [sortBy, setSortBy] = useState<'viewed' | 'favorites' | 'newest' | 'recipe' | 'hidden'>('recipe')
   const [favCreators, setFavCreators] = useState<Set<string>>(() => {
@@ -426,13 +432,15 @@ export default function App() {
     return n || 0
   }
 
+  const searchMatchIds = search ? new Set(searchIndex.search(search).map(result => result.item.id)) : null
+
   const filtered = recipes
     .filter(r => sortBy === 'hidden' ? hiddenIds.has(r.id) : !hiddenIds.has(r.id))
     .filter(r => {
       if (sortBy === 'hidden') return true
       if (activeCreator && r.handle !== activeCreator) return false
       if (activeCuisine && r.cuisine !== activeCuisine) return false
-      if (search && !r.title.toLowerCase().includes(search.toLowerCase()) && !r.creator.toLowerCase().includes(search.toLowerCase())) return false
+      if (searchMatchIds && !searchMatchIds.has(r.id)) return false
       return true
     })
     .filter(r => sortBy === 'favorites' ? saved.has(r.id) : sortBy === 'recipe' ? r.hasAiRecipe : true)
