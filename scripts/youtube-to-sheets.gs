@@ -70,6 +70,56 @@ function getVideoViews(videoId) {
   return ''
 }
 
+// One-time backfill: fills PublishedAt for existing rows that don't have it yet.
+function backfillPublishedDates() {
+  var sheet = getSheet()
+  var lastRow = sheet.getLastRow()
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+  var publishedAtCol = ensureColumn(sheet, headers, 'PublishedAt')
+  var videoIdIdx = headers.indexOf('VideoID')
+
+  var lastCol = sheet.getLastColumn()
+  var allData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues()
+
+  var rowsToFill = []
+  for (var i = 0; i < allData.length; i++) {
+    var existing = allData[i][publishedAtCol - 1]
+    var videoId = String(allData[i][videoIdIdx] || '').trim()
+    if (!existing && videoId) {
+      rowsToFill.push({ row: i + 2, videoId: videoId })
+    }
+  }
+
+  var updated = 0
+  for (var b = 0; b < rowsToFill.length; b += 50) {
+    var batch = rowsToFill.slice(b, b + 50)
+    var ids = batch.map(function(r) { return r.videoId }).join(',')
+    try {
+      var result = YouTube.Videos.list('snippet', { id: ids })
+      var byId = {}
+      if (result.items) {
+        for (var k = 0; k < result.items.length; k++) {
+          byId[result.items[k].id] = result.items[k].snippet.publishedAt
+        }
+      }
+      for (var m = 0; m < batch.length; m++) {
+        var pub = byId[batch[m].videoId]
+        if (pub) {
+          sheet.getRange(batch[m].row, publishedAtCol).setValue(pub)
+          updated++
+        }
+      }
+    } catch (e) {
+      Logger.log('Backfill batch error: ' + e)
+    }
+    Utilities.sleep(300)
+  }
+
+  var msg = 'Backfilled ' + updated + ' of ' + rowsToFill.length + ' rows with PublishedAt.'
+  Logger.log(msg)
+  SpreadsheetApp.getUi().alert(msg)
+}
+
 function scrapeChannels() {
   var sheet = getSheet()
   var existingIds = getExistingIds(sheet)
