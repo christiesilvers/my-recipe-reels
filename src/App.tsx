@@ -142,8 +142,8 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl flex flex-col"
-        style={{ background: '#1a1a1a', height: '98vh' }}
+        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[98vh] md:h-auto md:max-h-[92vh]"
+        style={{ background: '#1a1a1a' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -152,7 +152,7 @@ function ReelModal({ reel, onClose, onHide, onPrev, onNext, saved, onToggleSave 
           <button onClick={onClose} className="text-base leading-none p-1" style={{ color: 'rgba(255,255,255,0.5)' }}>✕</button>
         </div>
         {/* Video */}
-        <div className="w-full relative flex-1 min-h-0" style={{ background: reel.bg }}>
+        <div className="w-full relative flex-1 min-h-0 md:flex-none md:aspect-[9/16]" style={{ background: reel.bg }}>
           {!isMobile && (
             <div className="absolute top-1 right-1 z-10 flex flex-col gap-2">
               <button
