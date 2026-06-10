@@ -500,6 +500,34 @@ function extractRecipeWithClaude(content, title) {
   }
 }
 
+// Clears NO_CONTENT/NO_RECIPE markers so scrapeRecipes will retry those rows
+// (e.g. after improving getVideoContent with the ASR caption fallback).
+function retryFailedRecipes() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet()
+  var sheet = ss.getSheetByName(SHEET_NAME)
+  var lastRow = sheet.getLastRow()
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+  var recipeCol = headers.indexOf('Recipe') + 1
+  if (recipeCol === 0) {
+    SpreadsheetApp.getUi().alert('No Recipe column found.')
+    return
+  }
+
+  var values = sheet.getRange(2, recipeCol, lastRow - 1, 1).getValues()
+  var cleared = 0
+  for (var i = 0; i < values.length; i++) {
+    var v = String(values[i][0] || '')
+    if (v === 'NO_CONTENT' || v === 'NO_RECIPE') {
+      sheet.getRange(i + 2, recipeCol).setValue('')
+      cleared++
+    }
+  }
+
+  var msg = 'Cleared ' + cleared + ' rows. Run scrapeRecipes to retry them.'
+  Logger.log(msg)
+  SpreadsheetApp.getUi().alert(msg)
+}
+
 function scrapeRecipesTest() {
   var ss = SpreadsheetApp.getActiveSpreadsheet()
   var sheet = ss.getSheetByName(SHEET_NAME)
