@@ -53,6 +53,7 @@ function normalize(row: Record<string, string>): Record<string, string> {
 // and should never show up in the catalog.
 const BLOCKED_HANDLES = new Set([
   '@cocomelonnurseryrhymes',
+  '@lasrecetasdesimn',
 ])
 
 // Matches scripts other than basic Latin (Cyrillic, CJK, Arabic, Hebrew, etc.)
