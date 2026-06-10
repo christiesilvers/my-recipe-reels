@@ -55,11 +55,16 @@ const BLOCKED_HANDLES = new Set([
   '@cocomelonnurseryrhymes',
 ])
 
+// Matches scripts other than basic Latin (Cyrillic, CJK, Arabic, Hebrew, etc.)
+// so non-English titles don't display in the catalog.
+const NON_LATIN_SCRIPT = /[Ѐ-ӿ֐-ࣿऀ-෿฀-๿　-鿿가-힯豈-﫿＀-￯]/
+
 function rowToRecipe(raw: Record<string, string>, i: number): Recipe | null {
   const r = normalize(raw)
   const title = r['title'] || ''
   if (!title) return null
   if (BLOCKED_HANDLES.has((r['handle'] || '').toLowerCase())) return null
+  if (NON_LATIN_SCRIPT.test(title)) return null
 
   return {
     id: `recipe-${i}`,
