@@ -58,9 +58,11 @@ function printRecipe(reel: Reel) {
   try { parsed = reel.recipe ? JSON.parse(reel.recipe) : null } catch { parsed = null }
   if (!parsed) return
 
+  const title = reel.title.replace(/#\S+/g, '').replace(/\s+/g, ' ').trim()
+
   const win = window.open('', '_blank')
   if (!win) return
-  win.document.write(`<!DOCTYPE html><html><head><title>${reel.title} — Recipe</title><style>
+  win.document.write(`<!DOCTYPE html><html><head><title>${title} — Recipe</title><style>
     body { font-family: Georgia, serif; max-width: 600px; margin: 40px auto; padding: 0 20px; color: #111; }
     h1 { font-size: 1.6rem; margin-bottom: 4px; }
     .meta { color: #666; font-size: 0.9rem; margin-bottom: 24px; }
@@ -69,7 +71,7 @@ function printRecipe(reel: Reel) {
     .footer { margin-top: 40px; font-size: 0.75rem; color: #aaa; }
     @media print { body { margin: 20px; } }
   </style></head><body>
-    <h1>${reel.title}</h1>
+    <h1>${title}</h1>
     <div class="meta">${reel.creator}${parsed.time ? ' · ' + parsed.time : ''}${parsed.servings ? ' · Serves ' + parsed.servings : ''}</div>
     ${parsed.ingredients?.length ? `<h2>Ingredients</h2><ul style="columns:2;gap:2em;list-style:none;padding-left:0;">${parsed.ingredients.map(i => `<li style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;"><input type="checkbox" style="margin-top:2px;flex-shrink:0;"> ${i}</li>`).join('')}</ul>` : ''}
     ${parsed.steps?.length ? `<h2>Steps</h2><ol>${parsed.steps.map(s => `<li>${s}</li>`).join('')}</ol>` : ''}
