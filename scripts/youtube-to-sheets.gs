@@ -221,12 +221,20 @@ function scrapeSearches() {
   var existingIds = getExistingIds(sheet)
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
   var publishedAtCol = ensureColumn(sheet, headers, 'PublishedAt')
-  var rows = []
-  var publishedAtRows = []
+  var MAX_RUNTIME_MS = 5 * 60 * 1000 // stop before Apps Script's execution limit; rerun to continue
+  var startTime = Date.now()
+  var totalAdded = 0
   var skipped = 0
 
   for (var s = 0; s < SEARCHES.length; s++) {
+    if (Date.now() - startTime > MAX_RUNTIME_MS) {
+      Logger.log('Stopping early to avoid timeout (ran ' + Math.round((Date.now() - startTime) / 1000) + 's).')
+      break
+    }
+
     var srch = SEARCHES[s]
+    var rows = []
+    var publishedAtRows = []
     try {
       var results = YouTube.Search.list('snippet', {
         q: srch.query,
@@ -261,15 +269,16 @@ function scrapeSearches() {
     } catch (err) {
       Logger.log('Error on ' + srch.query + ': ' + err)
     }
+
+    if (rows.length > 0) {
+      var lastRow = sheet.getLastRow()
+      sheet.getRange(lastRow + 1, 1, rows.length, 8).setValues(rows)
+      sheet.getRange(lastRow + 1, publishedAtCol, publishedAtRows.length, 1).setValues(publishedAtRows)
+      totalAdded += rows.length
+    }
   }
 
-  if (rows.length > 0) {
-    var lastRow = sheet.getLastRow()
-    sheet.getRange(lastRow + 1, 1, rows.length, 8).setValues(rows)
-    sheet.getRange(lastRow + 1, publishedAtCol, publishedAtRows.length, 1).setValues(publishedAtRows)
-  }
-
-  var msg = 'Done! Added ' + rows.length + ' reels. Skipped ' + skipped + ' dupes. Total: ' + (sheet.getLastRow() - 1)
+  var msg = 'Done in ' + Math.round((Date.now() - startTime) / 1000) + 's! Added ' + totalAdded + ' reels. Skipped ' + skipped + ' dupes. Total: ' + (sheet.getLastRow() - 1)
   Logger.log(msg)
   SpreadsheetApp.getUi().alert(msg)
 }
