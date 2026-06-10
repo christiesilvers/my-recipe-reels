@@ -417,6 +417,31 @@ function getVideoContent(videoId) {
     Logger.log('Caption error for ' + videoId + ': ' + e)
   }
 
+  // Try YouTube's auto-generated (ASR) captions directly — these often work
+  // even when no track shows up in the caption list above.
+  try {
+    var asrUrl = 'https://www.youtube.com/api/timedtext?v=' + videoId + '&lang=en&kind=asr&fmt=json3'
+    var asrResp = UrlFetchApp.fetch(asrUrl, { muteHttpExceptions: true })
+    if (asrResp.getResponseCode() === 200) {
+      var asrText = asrResp.getContentText()
+      if (asrText) {
+        var asrData = JSON.parse(asrText)
+        if (asrData.events) {
+          var autoCaptionText = asrData.events
+            .filter(function(e) { return e.segs })
+            .map(function(e) { return e.segs.map(function(s) { return s.utf8 }).join('') })
+            .join(' ').replace(/\s+/g, ' ').trim()
+          if (autoCaptionText.length > 100) {
+            Logger.log('Using auto-generated captions for ' + videoId)
+            return autoCaptionText
+          }
+        }
+      }
+    }
+  } catch(e) {
+    Logger.log('Auto-caption error for ' + videoId + ': ' + e)
+  }
+
   // Fall back to video description
   var apiKey = PropertiesService.getScriptProperties().getProperty('YOUTUBE_API_KEY')
   if (!apiKey) return null
