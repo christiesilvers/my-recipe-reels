@@ -580,14 +580,14 @@ export default function App() {
                 onClick={() => setActiveCuisine(activeCuisine === c.name ? null : c.name)}
                 className="rounded-2xl overflow-hidden text-center cursor-pointer transition"
                 style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: activeCuisine === c.name ? `1.5px solid ${GREEN}` : '0.5px solid rgba(255,255,255,0.1)',
+                  background: activeCuisine === c.name ? GREEN_DARK : GREEN,
+                  border: activeCuisine === c.name ? '1.5px solid #ffffff' : '0.5px solid rgba(255,255,255,0.1)',
                 }}
               >
                 <div className="h-14 md:h-20 overflow-hidden">
                   <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
                 </div>
-                <div className="text-[11px] font-medium py-1.5 px-1" style={{ color: activeCuisine === c.name ? GREEN : 'rgba(255,255,255,0.8)' }}>
+                <div className="text-sm md:text-base font-bold py-2 px-1 leading-tight" style={{ color: '#ffffff' }}>
                   {c.name}
                 </div>
               </button>
