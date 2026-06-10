@@ -224,10 +224,11 @@ function scrapeSearches() {
   var existingIds = getExistingIds(sheet)
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
   var publishedAtCol = ensureColumn(sheet, headers, 'PublishedAt')
-  var MAX_RUNTIME_MS = 5 * 60 * 1000 // stop before Apps Script's execution limit; rerun to continue
+  var MAX_RUNTIME_MS = 4 * 60 * 1000 // stop before Apps Script's execution limit; rerun to continue
   var startTime = Date.now()
   var totalAdded = 0
   var skipped = 0
+  var timedOut = false
 
   for (var s = 0; s < SEARCHES.length; s++) {
     if (Date.now() - startTime > MAX_RUNTIME_MS) {
@@ -252,6 +253,11 @@ function scrapeSearches() {
       if (!results || !results.items) continue
 
       for (var j = 0; j < results.items.length; j++) {
+        if (Date.now() - startTime > MAX_RUNTIME_MS) {
+          Logger.log('Stopping early mid-search to avoid timeout (ran ' + Math.round((Date.now() - startTime) / 1000) + 's).')
+          timedOut = true
+          break
+        }
         var item = results.items[j]
         var videoId = item.id && item.id.videoId
         if (!videoId) continue
@@ -268,7 +274,7 @@ function scrapeSearches() {
         existingIds[videoId] = true
       }
 
-      Utilities.sleep(500)
+      if (!timedOut) Utilities.sleep(500)
     } catch (err) {
       Logger.log('Error on ' + srch.query + ': ' + err)
     }
@@ -279,6 +285,8 @@ function scrapeSearches() {
       sheet.getRange(lastRow + 1, publishedAtCol, publishedAtRows.length, 1).setValues(publishedAtRows)
       totalAdded += rows.length
     }
+
+    if (timedOut) break
   }
 
   var msg = 'Done in ' + Math.round((Date.now() - startTime) / 1000) + 's! Added ' + totalAdded + ' reels. Skipped ' + skipped + ' dupes. Total: ' + (sheet.getLastRow() - 1)
