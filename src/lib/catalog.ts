@@ -48,10 +48,17 @@ function normalize(row: Record<string, string>): Record<string, string> {
   return out
 }
 
+// Creators whose content isn't actually cooking recipes (e.g. kids' songs)
+// and should never show up in the catalog.
+const BLOCKED_HANDLES = new Set([
+  '@cocomelonnurseryrhymes',
+])
+
 function rowToRecipe(raw: Record<string, string>, i: number): Recipe | null {
   const r = normalize(raw)
   const title = r['title'] || ''
   if (!title) return null
+  if (BLOCKED_HANDLES.has((r['handle'] || '').toLowerCase())) return null
 
   return {
     id: `recipe-${i}`,
