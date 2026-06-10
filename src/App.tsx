@@ -488,7 +488,7 @@ export default function App() {
           <h1 className="text-xl sm:text-3xl md:text-5xl font-bold text-white mb-4 leading-tight whitespace-nowrap" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.9)' }}>
             Search · Save · Shop · Serve
           </h1>
-          <div className="flex gap-2 rounded-2xl p-2" style={{ background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.35)' }}>
+          <div className="flex gap-2 rounded-2xl p-2" style={{ background: 'rgba(255,255,255,0.92)', border: '0.5px solid rgba(255,255,255,0.5)' }}>
             <input
               type="text"
               size={1}
@@ -497,7 +497,7 @@ export default function App() {
               onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && submitSearch()}
               className="flex-1 min-w-0 bg-transparent px-3 py-2 text-sm outline-none"
-              style={{ color: 'rgba(255,255,255,0.9)' }}
+              style={{ color: '#1a1a1a' }}
             />
             <button
               onClick={submitSearch}
