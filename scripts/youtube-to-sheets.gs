@@ -25,9 +25,18 @@ function getSheet() {
     sheet = ss.insertSheet(SHEET_NAME)
   }
   if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 1, 8).setValues([['Title', 'Creator', 'Handle', 'Cuisine', 'ReelURL', 'Views', 'HasAIRecipe', 'VideoID']])
+    sheet.getRange(1, 1, 1, 9).setValues([['Title', 'Creator', 'Handle', 'Cuisine', 'ReelURL', 'Views', 'HasAIRecipe', 'VideoID', 'PublishedAt']])
   }
   return sheet
+}
+
+// Returns the 1-based column index for a header, adding it to the end if missing.
+function ensureColumn(sheet, headers, name) {
+  var idx = headers.indexOf(name)
+  if (idx !== -1) return idx + 1
+  sheet.getRange(1, headers.length + 1).setValue(name)
+  headers.push(name)
+  return headers.length
 }
 
 function getExistingIds(sheet) {
@@ -65,6 +74,8 @@ function scrapeChannels() {
   var sheet = getSheet()
   var existingIds = getExistingIds(sheet)
   var props = PropertiesService.getScriptProperties()
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+  var publishedAtCol = ensureColumn(sheet, headers, 'PublishedAt')
   var totalAdded = 0
   var totalSkipped = 0
 
@@ -93,6 +104,7 @@ function scrapeChannels() {
     var pageToken = props.getProperty(propKey) || null
     var pagesThisRun = 0
     var rows = []
+    var publishedAtRows = []
 
     while (pagesThisRun < MAX_PAGES_PER_RUN) {
       var params = { playlistId: uploadsPlaylistId, maxResults: 50 }
@@ -121,6 +133,7 @@ function scrapeChannels() {
         Utilities.sleep(100)
 
         rows.push([title, ch.creator, ch.handle, ch.cuisine, 'https://www.youtube.com/embed/' + videoId, views, 'false', videoId])
+        publishedAtRows.push([item.snippet.publishedAt || ''])
         existingIds[videoId] = true
         totalAdded++
       }
@@ -144,6 +157,7 @@ function scrapeChannels() {
     if (rows.length > 0) {
       var lastRow = sheet.getLastRow()
       sheet.getRange(lastRow + 1, 1, rows.length, 8).setValues(rows)
+      sheet.getRange(lastRow + 1, publishedAtCol, publishedAtRows.length, 1).setValues(publishedAtRows)
     }
   }
 
@@ -155,7 +169,10 @@ function scrapeChannels() {
 function scrapeSearches() {
   var sheet = getSheet()
   var existingIds = getExistingIds(sheet)
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+  var publishedAtCol = ensureColumn(sheet, headers, 'PublishedAt')
   var rows = []
+  var publishedAtRows = []
   var skipped = 0
 
   for (var s = 0; s < SEARCHES.length; s++) {
@@ -186,6 +203,7 @@ function scrapeSearches() {
         Utilities.sleep(100)
 
         rows.push([snippet.title, channelTitle, handle, srch.cuisine, 'https://www.youtube.com/embed/' + videoId, views, 'false', videoId])
+        publishedAtRows.push([snippet.publishedAt || ''])
         existingIds[videoId] = true
       }
 
@@ -198,6 +216,7 @@ function scrapeSearches() {
   if (rows.length > 0) {
     var lastRow = sheet.getLastRow()
     sheet.getRange(lastRow + 1, 1, rows.length, 8).setValues(rows)
+    sheet.getRange(lastRow + 1, publishedAtCol, publishedAtRows.length, 1).setValues(publishedAtRows)
   }
 
   var msg = 'Done! Added ' + rows.length + ' reels. Skipped ' + skipped + ' dupes. Total: ' + (sheet.getLastRow() - 1)

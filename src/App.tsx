@@ -438,7 +438,14 @@ export default function App() {
     .filter(r => sortBy === 'favorites' ? saved.has(r.id) : sortBy === 'recipe' ? r.hasAiRecipe : true)
     .sort((a, b) => {
       if (sortBy === 'viewed') return parseViews(b.views) - parseViews(a.views)
-      if (sortBy === 'newest') return parseInt(b.id.replace('recipe-', '')) - parseInt(a.id.replace('recipe-', ''))
+      if (sortBy === 'newest') {
+        const aTime = a.publishedAt ? Date.parse(a.publishedAt) : NaN
+        const bTime = b.publishedAt ? Date.parse(b.publishedAt) : NaN
+        if (!isNaN(aTime) && !isNaN(bTime)) return bTime - aTime
+        if (!isNaN(bTime)) return 1
+        if (!isNaN(aTime)) return -1
+        return parseInt(b.id.replace('recipe-', '')) - parseInt(a.id.replace('recipe-', ''))
+      }
       return 0
     })
 

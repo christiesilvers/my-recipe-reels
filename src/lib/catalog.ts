@@ -11,6 +11,7 @@ export type Recipe = {
   hasAiRecipe: boolean
   videoId: string
   recipe?: string
+  publishedAt?: string
 }
 
 const SHEET_CSV_URL = import.meta.env.VITE_SHEET_CSV_URL as string | undefined
@@ -71,6 +72,7 @@ function rowToRecipe(raw: Record<string, string>, i: number): Recipe | null {
     videoId: r['videoid'] || '',
     recipe: r['recipe']?.startsWith('{') ? r['recipe'] : undefined,
     hasAiRecipe: (r['recipe'] || '').startsWith('{'),
+    publishedAt: r['publishedat'] || undefined,
   }
 }
 
