@@ -459,6 +459,8 @@ function scrapeRecipes() {
   var videoIdIdx = headers.indexOf('VideoID')
   var recipeIdx = recipeCol - 1
   var MAX_PER_RUN = 50
+  var MAX_RUNTIME_MS = 5 * 60 * 1000 // stop before Apps Script's execution limit; rerun to continue
+  var startTime = Date.now()
   var processed = 0
   var added = 0
   var skipped = 0
@@ -469,6 +471,10 @@ function scrapeRecipes() {
   var allData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues()
 
   for (var i = 0; i < allData.length && processed < MAX_PER_RUN; i++) {
+    if (Date.now() - startTime > MAX_RUNTIME_MS) {
+      Logger.log('Stopping early to avoid timeout (ran ' + Math.round((Date.now() - startTime) / 1000) + 's).')
+      break
+    }
     var row = allData[i]
     if (row[recipeIdx]) { skipped++; continue }
 
@@ -492,5 +498,5 @@ function scrapeRecipes() {
     Utilities.sleep(300)
   }
 
-  Logger.log('Done! Extracted ' + added + ' recipes. No content: ' + noContent + '. Already done: ' + skipped + '. Run again to continue.')
+  Logger.log('Done in ' + Math.round((Date.now() - startTime) / 1000) + 's! Extracted ' + added + ' recipes. No content: ' + noContent + '. Already done: ' + skipped + '. Run again to continue.')
 }
