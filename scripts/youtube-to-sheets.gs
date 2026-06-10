@@ -19,6 +19,11 @@ var SEARCHES = [
   { query: 'instant pot recipe short',        cuisine: 'American'      },
   { query: 'crock pot recipe short',          cuisine: 'American'      },
   { query: 'keto recipe short',               cuisine: 'American'      },
+  // Date-ordered: surfaces newly-uploaded videos so reruns keep finding fresh content
+  // instead of re-hitting the same top viewCount results.
+  { query: 'recipe short',                    cuisine: 'American',      order: 'date' },
+  { query: 'easy dinner recipe reel',         cuisine: 'American',      order: 'date' },
+  { query: 'dessert recipe short',            cuisine: 'Desserts',      order: 'date' },
 ]
 
 function getSheet() {
@@ -244,7 +249,7 @@ function scrapeSearches() {
         q: srch.query,
         type: 'video',
         videoDuration: 'short',
-        order: 'viewCount',
+        order: srch.order || 'viewCount',
         maxResults: 50,
         relevanceLanguage: 'en',
         safeSearch: 'none',
