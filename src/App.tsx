@@ -625,7 +625,7 @@ export default function App() {
                 { key: 'recipe',    label: 'Recipe Included' },
                 { key: 'favorites', label: 'My Favorites' },
                 { key: 'newest',    label: 'Recently Posted' },
-                { key: 'viewed',    label: 'Most Viewed' },
+                { key: 'viewed',    label: 'Most Popular' },
                 { key: 'hidden',    label: 'Hidden' },
               ] as const).map(opt => (
                 <button
